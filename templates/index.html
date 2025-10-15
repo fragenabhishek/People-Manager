@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👥 People Manager</h1>
+            <p class="subtitle">Store and manage people's information</p>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="🔍 Search by name..." class="search-input">
+        </div>
+
+        <!-- Add New Person Button -->
+        <div class="action-section">
+            <button id="addPersonBtn" class="btn btn-primary">+ Add New Person</button>
+        </div>
+
+        <!-- People Grid -->
+        <div id="peopleGrid" class="people-grid">
+            <!-- People cards will be inserted here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📋</div>
+            <h3>No people found</h3>
+            <p>Start by adding a new person or try a different search.</p>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Person -->
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Person</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="personForm">
+                <input type="hidden" id="personId">
+                
+                <div class="form-group">
+                    <label for="personName">Name *</label>
+                    <input type="text" id="personName" placeholder="John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="personDetails">Details / Summary</label>
+                    <textarea id="personDetails" rows="6" placeholder="Enter details or summary about this person..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Person</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
