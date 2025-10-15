@@ -30,6 +30,10 @@ ENV/
 instance/
 .webassets-cache
 
+# Environment variables
+.env
+.env.local
+
 # Data files (user data - don't commit)
 data.json
 
