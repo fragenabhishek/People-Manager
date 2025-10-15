@@ -10,8 +10,9 @@
 2. Create FREE M0 cluster
 3. Create database user: username + password
 4. Network Access: Allow 0.0.0.0/0
-5. Get connection string:
-   mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/people_manager
+5. Get connection string (format):
+   mongodb+srv://USERNAME:PASSWORD@YOUR-CLUSTER.mongodb.net/people_manager
+   (Replace USERNAME, PASSWORD, and YOUR-CLUSTER with your actual values)
 ```
 
 #### 2. Deploy to Render (3 minutes)

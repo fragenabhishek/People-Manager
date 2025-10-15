@@ -53,7 +53,8 @@ This is completely FREE and gives you persistent database storage.
    - Click **"Add Environment Variable"**
    - **Key**: `MONGO_URI`
    - **Value**: Paste your MongoDB connection string from Step 1
-   - Example: `mongodb+srv://admin:yourpassword@cluster0.xxxxx.mongodb.net/people_manager?retryWrites=true&w=majority`
+   - Format: `mongodb+srv://USERNAME:PASSWORD@YOUR_CLUSTER.mongodb.net/people_manager`
+   - Replace USERNAME, PASSWORD, and YOUR_CLUSTER with your actual MongoDB credentials
 6. Click **"Create Web Service"**
 7. Wait 5-10 minutes for deployment
 8. Your app will be live at: `https://people-manager-xxxx.onrender.com`
