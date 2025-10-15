@@ -1,133 +1,130 @@
 # People Manager
 
-A modern web application built with Python Flask to manage people's information with a beautiful and intuitive interface.
+A simple and modern web application built with Python Flask to manage people's information.
+
+🌐 **Live Demo**: [https://people-manager-kebr.onrender.com/](https://people-manager-kebr.onrender.com/)
 
 ## Features
 
-- ✨ **Add New People**: Store information including name, initials, email, phone, and description
-- 🔍 **Search Functionality**: Search people by name, initials, or description
-- ✏️ **Update Records**: Edit existing person's information
-- 🗑️ **Delete Records**: Remove people from the database
-- 💾 **Persistent Storage**: Data stored in JSON format
+- ✨ **Add People**: Store name and details/summary for each person
+- 🔍 **Search**: Search people by name in real-time
+- 👁️ **View Details**: Click on any person's name to view their details
+- ✏️ **Update**: Edit person's information
+- 🗑️ **Delete**: Remove people from the database
+- 💾 **Cloud Storage**: Data stored in MongoDB Atlas (cloud database)
 - 🎨 **Modern UI**: Beautiful gradient design with smooth animations
 
-## Installation
+## Quick Start (Local Development)
 
-1. **Install Python** (if not already installed)
-   - Download from [python.org](https://www.python.org/downloads/)
-   - Make sure Python 3.7+ is installed
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/fragenabhishek/People-Manager.git
+   cd People-Manager
+   ```
 
 2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
 
-## Running the Application
-
-1. **Start the server**:
+3. **Run the app**:
    ```bash
    python app.py
    ```
 
-2. **Open your browser** and navigate to:
+4. **Open your browser**:
    ```
    http://localhost:5000
    ```
 
+The app will use JSON file storage locally. To use MongoDB, set the `MONGO_URI` environment variable.
+
 ## Usage
 
 ### Adding a Person
-1. Click the "Add New Person" button
-2. Fill in the form with:
-   - Initial (required) - e.g., "JD"
-   - Full Name (required) - e.g., "John Doe"
-   - Email (optional)
-   - Phone (optional)
-   - Description (optional)
+1. Click "Add New Person"
+2. Enter name (required) and details/summary (optional)
 3. Click "Save Person"
 
-### Searching for People
-- Type in the search bar at the top
-- Results will filter in real-time
-- Search works across name, initials, and description
+### Viewing Details
+- Click on any person's name to expand and view their details
 
-### Editing a Person
-1. Click the "Edit" button on any person card
+### Searching
+- Type in the search bar to find people by name
+- Results update in real-time
+
+### Editing
+1. Click "Edit" on any person card
 2. Modify the information
 3. Click "Save Person"
 
-### Deleting a Person
-1. Click the "Delete" button on any person card
-2. Confirm the deletion
+### Deleting
+1. Click "Delete" on any person card
+2. Confirm deletion
 
 ## Project Structure
 
 ```
 people-manager/
-│
-├── app.py                 # Flask backend (REST API)
-├── data.json             # Data storage (auto-generated)
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
-│
+├── app.py              # Flask backend + MongoDB support
+├── requirements.txt    # Python dependencies
+├── render.yaml         # Render.com deployment config
+├── data.json          # Local JSON storage (fallback)
 ├── templates/
-│   └── index.html       # Main HTML template
-│
+│   └── index.html     # Main UI
 └── static/
-    ├── style.css        # Styles and design
-    └── script.js        # Frontend JavaScript
+    ├── script.js      # Frontend logic
+    └── style.css      # Styling
 ```
 
 ## API Endpoints
 
+- `GET /` - Main UI
 - `GET /api/people` - Get all people
 - `GET /api/people/<id>` - Get specific person
-- `GET /api/people/search/<query>` - Search people
+- `GET /api/people/search/<query>` - Search by name
 - `POST /api/people` - Add new person
 - `PUT /api/people/<id>` - Update person
 - `DELETE /api/people/<id>` - Delete person
 
 ## Technologies Used
 
-- **Backend**: Python, Flask
-- **Frontend**: HTML, CSS, JavaScript
-- **Storage**: JSON file-based database
+- **Backend**: Python 3.11, Flask 3.0
+- **Database**: MongoDB Atlas (cloud) / JSON file (local)
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Hosting**: Render.com (free tier)
+- **Server**: Gunicorn
 
-## Features Highlights
+## Technical Highlights
 
-### Backend (Python Flask)
 - RESTful API design
-- JSON-based data persistence
-- Error handling
-- CORS support for API calls
-
-### Frontend
-- Responsive design
-- Modern gradient UI
-- Smooth animations
+- Dual storage support (MongoDB + JSON fallback)
+- Click-to-expand details UI pattern
 - Real-time search
-- Modal forms for add/edit
+- Responsive design
+- Modern gradient aesthetics
 
-## Customization
+## Deployment
 
-You can customize the appearance by editing `static/style.css`:
-- Change color scheme (modify CSS variables in `:root`)
-- Adjust card layouts
-- Modify animations
-- Update gradients
+The app is deployed on Render.com with MongoDB Atlas. It automatically detects the environment:
 
-## Future Enhancements
+- **With MONGO_URI**: Uses MongoDB cloud database
+- **Without MONGO_URI**: Uses local JSON file storage
 
-Potential features to add:
-- Database integration (SQLite, PostgreSQL)
-- User authentication
-- Profile pictures
-- Export to CSV/PDF
-- Advanced filtering
-- Dark mode toggle
-- Tags/Categories
+To deploy your own:
+1. Fork this repository
+2. Create a MongoDB Atlas cluster (free tier)
+3. Create a new web service on Render.com
+4. Connect your GitHub repo
+5. Add environment variable: `MONGO_URI` with your MongoDB connection string
+6. Deploy!
+
+## Environment Variables
+
+- `MONGO_URI` (optional) - MongoDB connection string
+- `PORT` (auto-set by Render) - Server port
 
 ## License
 
-MIT License - Feel free to use and modify as needed!
+MIT License - Feel free to use and modify!
 
