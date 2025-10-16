@@ -1,11 +1,24 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_bcrypt import Bcrypt
 import json
 import os
 from datetime import datetime
 from pymongo import MongoClient
 from bson import ObjectId
+from functools import wraps
 
 app = Flask(__name__)
+bcrypt = Bcrypt(app)
+
+# Secret key for session management
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# App password (hashed) - Change this password!
+# To set custom password, set APP_PASSWORD environment variable
+# Default password: "admin123" (change this!)
+APP_PASSWORD_HASH = bcrypt.generate_password_hash(
+    os.environ.get('APP_PASSWORD', 'admin123')
+).decode('utf-8')
 
 # Configuration - Use MongoDB if MONGO_URI is set, otherwise use JSON file
 MONGO_URI = os.environ.get('MONGO_URI')
@@ -116,18 +129,48 @@ def delete_person_data(person_id):
         write_data(people)
         return True
 
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page"""
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if bcrypt.check_password_hash(APP_PASSWORD_HASH, password):
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='Invalid password')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout"""
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
+
 @app.route('/')
+@login_required
 def index():
     """Render main page"""
     return render_template('index.html')
 
 @app.route('/api/people', methods=['GET'])
+@login_required
 def get_people():
     """Get all people"""
     people = read_data()
     return jsonify(people)
 
 @app.route('/api/people/<person_id>', methods=['GET'])
+@login_required
 def get_person(person_id):
     """Get a specific person by ID"""
     people = read_data()
@@ -138,6 +181,7 @@ def get_person(person_id):
     return jsonify({'error': 'Person not found'}), 404
 
 @app.route('/api/people/search/<query>', methods=['GET'])
+@login_required
 def search_people(query):
     """Search people by name"""
     people = read_data()
@@ -151,6 +195,7 @@ def search_people(query):
     return jsonify(results)
 
 @app.route('/api/people', methods=['POST'])
+@login_required
 def add_person():
     """Add a new person"""
     data = request.get_json()
@@ -162,6 +207,7 @@ def add_person():
     return jsonify(new_person), 201
 
 @app.route('/api/people/<person_id>', methods=['PUT'])
+@login_required
 def update_person(person_id):
     """Update an existing person"""
     data = request.get_json()
@@ -173,6 +219,7 @@ def update_person(person_id):
     return jsonify(person)
 
 @app.route('/api/people/<person_id>', methods=['DELETE'])
+@login_required
 def delete_person(person_id):
     """Delete a person"""
     success = delete_person_data(person_id)
