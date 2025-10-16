@@ -39,6 +39,7 @@ data.json
 
 # Chat history and notes (local only)
 CHAT_HISTORY.md
+AUTH_SETUP.md
 chat_export.md
 conversation.md
 notes.md
