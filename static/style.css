@@ -120,7 +120,7 @@ header h1 {
     color: var(--text-primary);
 }
 
-.btn-edit, .btn-danger {
+.btn-edit, .btn-update, .btn-danger {
     padding: 0.35rem 0.75rem;
     font-size: 0.8rem;
     border: none;
@@ -128,8 +128,16 @@ header h1 {
     color: var(--text-secondary);
 }
 
-.btn-edit:hover, .btn-danger:hover {
+.btn-edit:hover, .btn-update:hover, .btn-danger:hover {
     color: var(--text-primary);
+}
+
+.btn-update {
+    color: #2563eb;
+}
+
+.btn-update:hover {
+    color: #1d4ed8;
 }
 
 /* People List */

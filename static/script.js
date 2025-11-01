@@ -23,6 +23,7 @@ const confirmOk = document.getElementById('confirmOk');
 // State
 let allPeople = [];
 let isEditing = false;
+let isUpdating = false;
 let currentEditId = null;
 
 // Initialize
@@ -95,6 +96,7 @@ function renderPeople(people) {
             
             <div class="person-actions">
                 <button class="btn btn-edit" onclick="editPerson('${person.id}')">Edit</button>
+                <button class="btn btn-update" onclick="updatePersonInfo('${person.id}')">Update</button>
                 <button class="btn btn-danger" onclick="deletePerson('${person.id}')">Delete</button>
             </div>
         </div>
@@ -136,18 +138,36 @@ function toggleDetails(id) {
 }
 
 // Open modal
-function openModal(person = null) {
-    isEditing = !!person;
+function openModal(person = null, updateMode = false) {
+    isEditing = !!person && !updateMode;
+    isUpdating = updateMode;
     currentEditId = person ? person.id : null;
     
-    modalTitle.textContent = isEditing ? 'Edit Person' : 'Add New Person';
+    if (updateMode) {
+        modalTitle.textContent = 'Add Update';
+    } else {
+        modalTitle.textContent = isEditing ? 'Edit Person' : 'Add New Person';
+    }
     
     if (person) {
         document.getElementById('personId').value = person.id;
-        document.getElementById('personName').value = person.name;
-        document.getElementById('personDetails').value = person.details || '';
+        if (updateMode) {
+            // Update mode: show name but clear details field for new info
+            document.getElementById('personName').value = person.name;
+            document.getElementById('personName').readOnly = true; // Don't allow name change in update mode
+            document.getElementById('personDetails').value = '';
+            document.getElementById('personDetails').placeholder = 'Add new information...';
+        } else {
+            // Edit mode: show existing data
+            document.getElementById('personName').value = person.name;
+            document.getElementById('personName').readOnly = false;
+            document.getElementById('personDetails').value = person.details || '';
+            document.getElementById('personDetails').placeholder = 'Add notes or details...';
+        }
     } else {
         personForm.reset();
+        document.getElementById('personName').readOnly = false;
+        document.getElementById('personDetails').placeholder = 'Add notes or details...';
     }
     
     personModal.style.display = 'block';
@@ -159,7 +179,10 @@ function closeModal() {
     personModal.style.display = 'none';
     personForm.reset();
     isEditing = false;
+    isUpdating = false;
     currentEditId = null;
+    document.getElementById('personName').readOnly = false;
+    document.getElementById('personDetails').placeholder = 'Add notes or details...';
     document.body.style.overflow = ''; // Restore body scroll
 }
 
@@ -205,20 +228,56 @@ function closeConfirmModal() {
 async function handleSubmit(e) {
     e.preventDefault();
     
+    const newDetails = document.getElementById('personDetails').value;
     const personData = {
         name: document.getElementById('personName').value,
-        details: document.getElementById('personDetails').value
+        details: newDetails
     };
 
     try {
         let response;
-        if (isEditing) {
+        const timestamp = new Date().toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        if (isUpdating) {
+            // Update mode: Append new info to existing details
+            const person = allPeople.find(p => p.id === currentEditId);
+            
+            // Append new info with timestamp
+            const updatedDetails = person.details 
+                ? `${person.details}\n\n--- Update (${timestamp}) ---\n${newDetails}`
+                : `--- Update (${timestamp}) ---\n${newDetails}`;
+            
+            personData.details = updatedDetails;
+            
+            response = await fetch(`${API_URL}/${currentEditId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(personData)
+            });
+        } else if (isEditing) {
+            // Edit mode: Keep the content as-is (user manually edits)
+            // Just save whatever the user typed
+            personData.details = newDetails;
+            
             response = await fetch(`${API_URL}/${currentEditId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(personData)
             });
         } else {
+            // Add new person with timestamp
+            if (newDetails.trim()) {
+                personData.details = `--- Added (${timestamp}) ---\n${newDetails}`;
+            } else {
+                personData.details = '';
+            }
+            
             response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -228,9 +287,14 @@ async function handleSubmit(e) {
 
         if (response.ok) {
             closeModal();
-            const successMsg = isEditing 
-                ? `${personData.name} updated successfully!` 
-                : `${personData.name} added successfully!`;
+            let successMsg;
+            if (isUpdating) {
+                successMsg = `${personData.name} - new update added!`;
+            } else if (isEditing) {
+                successMsg = `${personData.name} edited successfully!`;
+            } else {
+                successMsg = `${personData.name} added successfully!`;
+            }
             showSuccess(successMsg);
             loadPeople();
         } else {
@@ -248,7 +312,19 @@ async function editPerson(id) {
     try {
         const response = await fetch(`${API_URL}/${id}`);
         const person = await response.json();
-        openModal(person);
+        openModal(person, false); // false = edit mode
+    } catch (error) {
+        console.error('Error loading person:', error);
+        showError('Failed to load person details');
+    }
+}
+
+// Update person (add new info)
+async function updatePersonInfo(id) {
+    try {
+        const response = await fetch(`${API_URL}/${id}`);
+        const person = await response.json();
+        openModal(person, true); // true = update mode
     } catch (error) {
         console.error('Error loading person:', error);
         showError('Failed to load person details');
