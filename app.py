@@ -6,6 +6,7 @@ from datetime import datetime
 from pymongo import MongoClient
 from bson import ObjectId
 from functools import wraps
+import google.generativeai as genai
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -23,6 +24,15 @@ APP_PASSWORD_HASH = bcrypt.generate_password_hash(
 # Configuration - Use MongoDB if MONGO_URI is set, otherwise use JSON file
 MONGO_URI = os.environ.get('MONGO_URI')
 USE_MONGODB = MONGO_URI is not None
+
+# Google Gemini Configuration (optional - feature disabled if not set)
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    # Use gemini-2.5-flash (free tier, fast and stable)
+    gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+else:
+    gemini_model = None
 
 if USE_MONGODB:
     # MongoDB Setup
@@ -228,6 +238,67 @@ def delete_person(person_id):
         return jsonify({'error': 'Person not found'}), 404
     
     return jsonify({'message': 'Person deleted successfully'})
+
+@app.route('/api/people/<person_id>/summary', methods=['POST'])
+@login_required
+def generate_summary(person_id):
+    """Generate AI summary for a person"""
+    if not gemini_model:
+        return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
+    
+    people = read_data()
+    person = next((p for p in people if p['id'] == person_id), None)
+    
+    if not person:
+        return jsonify({'error': 'Person not found'}), 404
+    
+    if not person.get('details'):
+        return jsonify({'error': 'No details available to summarize'}), 400
+    
+    try:
+        # Create prompt for the LLM
+        prompt = f"""You are a personal assistant helping to summarize contact information.
+
+Given the following raw details about a person named "{person['name']}", please create a clear, concise summary that:
+1. Extracts key information (phone, email, address, etc.) if present
+2. Summarizes main points from updates chronologically
+3. Highlights important facts
+4. Keeps it brief and easy to scan (3-5 bullet points max)
+
+Raw Details:
+{person['details']}
+
+Please format the response as a clean summary without any introductory phrases like "Here's a summary" or "Based on the information". Just provide the key points directly."""
+
+        # Call Google Gemini API with safety settings
+        from google.generativeai.types import HarmCategory, HarmBlockThreshold
+        
+        response = gemini_model.generate_content(
+            prompt,
+            safety_settings={
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            }
+        )
+        
+        # Check if response has text
+        if not response.text:
+            return jsonify({'error': 'No summary generated. Please try again.'}), 500
+        
+        summary = response.text.strip()
+        
+        return jsonify({
+            'summary': summary,
+            'generated_at': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        print(f"Error generating summary: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to generate summary: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

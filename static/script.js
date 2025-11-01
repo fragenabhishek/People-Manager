@@ -92,11 +92,22 @@ function renderPeople(people) {
                 ${person.details ? `
                     <div class="person-details">${person.details}</div>
                 ` : '<div class="no-details">No details available</div>'}
+                
+                <!-- AI Summary Section -->
+                <div class="ai-summary-section" id="summary-section-${person.id}" style="display: none;">
+                    <div class="ai-summary-header">
+                        <span class="ai-badge">Summary</span>
+                    </div>
+                    <div class="ai-summary-content" id="summary-content-${person.id}"></div>
+                </div>
             </div>
             
             <div class="person-actions">
                 <button class="btn btn-edit" onclick="editPerson('${person.id}')">Edit</button>
                 <button class="btn btn-update" onclick="updatePersonInfo('${person.id}')">Update</button>
+                <button class="btn btn-ai" onclick="generateAISummary('${person.id}')" id="ai-btn-${person.id}">
+                    Summary
+                </button>
                 <button class="btn btn-danger" onclick="deletePerson('${person.id}')">Delete</button>
             </div>
         </div>
@@ -328,6 +339,45 @@ async function updatePersonInfo(id) {
     } catch (error) {
         console.error('Error loading person:', error);
         showError('Failed to load person details');
+    }
+}
+
+// Generate AI Summary
+async function generateAISummary(id) {
+    const summarySection = document.getElementById(`summary-section-${id}`);
+    const summaryContent = document.getElementById(`summary-content-${id}`);
+    const aiButton = document.getElementById(`ai-btn-${id}`);
+    
+    // Show loading state
+    aiButton.disabled = true;
+    aiButton.innerHTML = 'Generating...';
+    summaryContent.innerHTML = '<div class="ai-loading">Generating summary...</div>';
+    summarySection.style.display = 'block';
+    
+    try {
+        const response = await fetch(`${API_URL}/${id}/summary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            summaryContent.innerHTML = `<div class="ai-summary-text">${data.summary}</div>`;
+            aiButton.innerHTML = 'Refresh';
+            showSuccess('Summary generated!');
+        } else {
+            const error = await response.json();
+            summaryContent.innerHTML = `<div class="ai-error">${error.error || 'Failed to generate summary'}</div>`;
+            aiButton.innerHTML = 'Summary';
+            showError(error.error || 'Failed to generate summary');
+        }
+    } catch (error) {
+        console.error('Error generating summary:', error);
+        summaryContent.innerHTML = '<div class="ai-error">Failed to generate summary. Please try again.</div>';
+        aiButton.innerHTML = 'Summary';
+        showError('Failed to generate summary');
+    } finally {
+        aiButton.disabled = false;
     }
 }
 
