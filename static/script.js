@@ -12,6 +12,14 @@ const modalTitle = document.getElementById('modalTitle');
 const closeBtn = document.querySelector('.close');
 const cancelBtn = document.getElementById('cancelBtn');
 
+// Confirmation Modal Elements
+const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmMessage = document.getElementById('confirmMessage');
+const confirmClose = document.getElementById('confirmClose');
+const confirmCancel = document.getElementById('confirmCancel');
+const confirmOk = document.getElementById('confirmOk');
+
 // State
 let allPeople = [];
 let isEditing = false;
@@ -31,10 +39,17 @@ function setupEventListeners() {
     personForm.addEventListener('submit', handleSubmit);
     searchInput.addEventListener('input', handleSearch);
     
+    // Confirmation modal listeners
+    confirmClose.addEventListener('click', closeConfirmModal);
+    confirmCancel.addEventListener('click', closeConfirmModal);
+    
     // Close modal when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === personModal) {
             closeModal();
+        }
+        if (e.target === confirmModal) {
+            closeConfirmModal();
         }
     });
 }
@@ -101,6 +116,7 @@ async function handleSearch(e) {
         renderPeople(results);
     } catch (error) {
         console.error('Error searching:', error);
+        showError('Search failed. Please try again.');
     }
 }
 
@@ -135,6 +151,7 @@ function openModal(person = null) {
     }
     
     personModal.style.display = 'block';
+    document.body.style.overflow = 'hidden'; // Prevent body scroll
 }
 
 // Close modal
@@ -143,6 +160,45 @@ function closeModal() {
     personForm.reset();
     isEditing = false;
     currentEditId = null;
+    document.body.style.overflow = ''; // Restore body scroll
+}
+
+// Custom confirm dialog
+function showConfirm(message, title = 'Confirm Action') {
+    return new Promise((resolve) => {
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmModal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Handle OK button click
+        const handleOk = () => {
+            cleanup();
+            resolve(true);
+        };
+        
+        // Handle cancel
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+        
+        // Cleanup function
+        const cleanup = () => {
+            confirmOk.removeEventListener('click', handleOk);
+            document.body.style.overflow = '';
+            closeConfirmModal();
+        };
+        
+        // Add event listener for OK button
+        confirmOk.addEventListener('click', handleOk);
+    });
+}
+
+// Close confirmation modal
+function closeConfirmModal() {
+    confirmModal.style.display = 'none';
+    document.body.style.overflow = '';
 }
 
 // Handle form submit
@@ -172,8 +228,11 @@ async function handleSubmit(e) {
 
         if (response.ok) {
             closeModal();
+            const successMsg = isEditing 
+                ? `${personData.name} updated successfully!` 
+                : `${personData.name} added successfully!`;
+            showSuccess(successMsg);
             loadPeople();
-            showSuccess(isEditing ? 'Person updated successfully!' : 'Person added successfully!');
         } else {
             const error = await response.json();
             showError(error.error || 'Failed to save person');
@@ -198,7 +257,17 @@ async function editPerson(id) {
 
 // Delete person
 async function deletePerson(id) {
-    if (!confirm('Are you sure you want to delete this person?')) {
+    // Get person name for toast message
+    const person = allPeople.find(p => p.id === id);
+    const personName = person ? person.name : 'Person';
+    
+    // Show custom confirmation dialog
+    const confirmed = await showConfirm(
+        `Are you sure you want to delete ${personName}?`,
+        'Delete Person'
+    );
+    
+    if (!confirmed) {
         return;
     }
 
@@ -209,7 +278,7 @@ async function deletePerson(id) {
 
         if (response.ok) {
             loadPeople();
-            showSuccess('Person deleted successfully!');
+            showSuccess(`${personName} deleted successfully!`);
         } else {
             showError('Failed to delete person');
         }
@@ -237,14 +306,67 @@ function formatDate(dateString) {
     }
 }
 
+// Toast notification system
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toastContainer');
+    
+    // Safety check
+    if (!toastContainer) {
+        console.error('Toast container not found!');
+        alert(message); // Fallback to alert
+        return;
+    }
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Icon based on type
+    const icon = type === 'success' ? '✓' : '✕';
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-message">${message}</div>
+        <button class="toast-close">×</button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Add click event to close button
+    const closeButton = toast.querySelector('.toast-close');
+    closeButton.addEventListener('click', function() {
+        removeToast(toast);
+    });
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        removeToast(toast);
+    }, 3000);
+}
+
+// Remove toast with animation
+function removeToast(toast) {
+    // Check if toast still exists and isn't already being removed
+    if (!toast || toast.classList.contains('hiding')) {
+        return;
+    }
+    
+    toast.classList.add('hiding');
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 300);
+}
+
 // Show success message
 function showSuccess(message) {
-    // Simple alert for now - can be replaced with a toast notification
-    alert(message);
+    showToast(message, 'success');
 }
 
 // Show error message
 function showError(message) {
-    alert('Error: ' + message);
+    showToast(message, 'error');
 }
 
