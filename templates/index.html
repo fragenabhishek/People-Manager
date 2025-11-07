@@ -26,26 +26,28 @@
             <input type="text" id="searchInput" placeholder="Search by name..." class="search-input">
         </div>
 
-        <!-- Central AI Q&A Section -->
-        <div class="central-qa-section">
-            <div class="central-qa-header">
-                <h2>💬 Ask Anything About Your Contacts</h2>
-                <p class="qa-subtitle">Ask questions like "Who did I meet this week?" or "Who should I follow up with?"</p>
+        <!-- Central AI Q&A Section - Minimalist & Collapsible -->
+        <div class="central-qa-compact" id="centralQACompact">
+            <div class="qa-toggle-bar" onclick="toggleCentralQA()">
+                <span class="qa-toggle-text">Ask AI about contacts</span>
+                <span class="qa-toggle-icon" id="qaToggleIcon">▼</span>
             </div>
-            <div class="central-qa-input-group">
-                <input 
-                    type="text" 
-                    id="centralQuestionInput" 
-                    class="central-question-input" 
-                    placeholder='e.g., "Who are my AI contacts?" or "When did I meet Sarah?"'
-                    onkeypress="handleCentralQuestionKeyPress(event)"
-                >
-                <button class="btn btn-primary btn-ask-central" id="centralAskBtn" onclick="askCentralQuestion()">
-                    Ask AI
-                </button>
-            </div>
-            <div class="central-qa-history" id="centralQAHistory" style="display: none;">
-                <!-- Q&A history will appear here -->
+            <div class="central-qa-content" id="centralQAContent" style="display: none;">
+                <div class="central-qa-input-group">
+                    <input 
+                        type="text" 
+                        id="centralQuestionInput" 
+                        class="central-question-input" 
+                        placeholder='e.g., "Who are my AI contacts?"'
+                        onkeypress="handleCentralQuestionKeyPress(event)"
+                    >
+                    <button class="btn btn-ask-compact" id="centralAskBtn" onclick="askCentralQuestion()">
+                        Ask
+                    </button>
+                </div>
+                <div class="central-qa-history" id="centralQAHistory" style="display: none;">
+                    <!-- Q&A history will appear here -->
+                </div>
             </div>
         </div>
 

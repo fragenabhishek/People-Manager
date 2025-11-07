@@ -91,25 +91,24 @@ function renderPeople(people) {
             
             <div class="person-details-content" id="details-${person.id}" style="display: none;">
                 ${person.details ? `
-                    <div class="person-details">${person.details}</div>
+                    <div class="person-details-scroll">${person.details}</div>
                 ` : '<div class="no-details">No details available</div>'}
                 
-                <!-- AI Blueprint Section -->
+                <!-- AI Blueprint Section - Collapsible -->
                 <div class="ai-summary-section" id="summary-section-${person.id}" style="display: none;">
-                    <div class="ai-summary-header">
-                        <span class="ai-badge">🧠 Person Blueprint</span>
+                    <div class="ai-summary-header" onclick="toggleBlueprint('${person.id}')">
+                        <span class="ai-badge-compact">Blueprint</span>
+                        <span class="blueprint-toggle" id="blueprint-toggle-${person.id}">▼</span>
                     </div>
-                    <div class="ai-summary-content" id="summary-content-${person.id}"></div>
+                    <div class="ai-summary-content" id="summary-content-${person.id}" style="display: none;"></div>
                 </div>
             </div>
             
-            <div class="person-actions">
-                <button class="btn btn-edit" onclick="editPerson('${person.id}')">Edit</button>
-                <button class="btn btn-update" onclick="updatePersonInfo('${person.id}')">Update</button>
-                <button class="btn btn-ai btn-blueprint" onclick="generateAISummary('${person.id}')" id="ai-btn-${person.id}">
-                    🧠 Blueprint
-                </button>
-                <button class="btn btn-danger" onclick="deletePerson('${person.id}')">Delete</button>
+            <div class="person-actions-compact">
+                <button class="btn-icon" onclick="editPerson('${person.id}')" title="Edit">✎</button>
+                <button class="btn-icon" onclick="updatePersonInfo('${person.id}')" title="Add Update">+</button>
+                <button class="btn-icon btn-ai-icon" onclick="generateAISummary('${person.id}')" id="ai-btn-${person.id}" title="Generate Blueprint">◈</button>
+                <button class="btn-icon btn-delete-icon" onclick="deletePerson('${person.id}')" title="Delete">×</button>
             </div>
         </div>
     `).join('');
@@ -146,6 +145,20 @@ function toggleDetails(id) {
     } else {
         detailsDiv.style.display = 'none';
         toggleIcon.textContent = '▼';
+    }
+}
+
+// Toggle blueprint section
+function toggleBlueprint(id) {
+    const content = document.getElementById(`summary-content-${id}`);
+    const toggle = document.getElementById(`blueprint-toggle-${id}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        toggle.textContent = '▼';
     }
 }
 
@@ -348,12 +361,15 @@ async function generateAISummary(id) {
     const summarySection = document.getElementById(`summary-section-${id}`);
     const summaryContent = document.getElementById(`summary-content-${id}`);
     const aiButton = document.getElementById(`ai-btn-${id}`);
+    const toggle = document.getElementById(`blueprint-toggle-${id}`);
     
     // Show loading state
     aiButton.disabled = true;
-    aiButton.innerHTML = 'Generating...';
-    summaryContent.innerHTML = '<div class="ai-loading">Generating summary...</div>';
+    aiButton.textContent = '⏳';
+    summaryContent.innerHTML = '<div class="ai-loading">Analyzing...</div>';
     summarySection.style.display = 'block';
+    summaryContent.style.display = 'block';
+    toggle.textContent = '▲';
     
     try {
         const response = await fetch(`${API_URL}/${id}/summary`, {
@@ -364,19 +380,20 @@ async function generateAISummary(id) {
         if (response.ok) {
             const data = await response.json();
             summaryContent.innerHTML = `<div class="ai-summary-text">${data.summary}</div>`;
-            aiButton.innerHTML = 'Refresh';
-            showSuccess('Summary generated!');
+            aiButton.textContent = '◈';
+            aiButton.title = 'Refresh Blueprint';
+            showSuccess('Blueprint generated!');
         } else {
             const error = await response.json();
-            summaryContent.innerHTML = `<div class="ai-error">${error.error || 'Failed to generate summary'}</div>`;
-            aiButton.innerHTML = 'Summary';
-            showError(error.error || 'Failed to generate summary');
+            summaryContent.innerHTML = `<div class="ai-error">${error.error || 'Failed to generate'}</div>`;
+            aiButton.textContent = '◈';
+            showError(error.error || 'Failed to generate');
         }
     } catch (error) {
         console.error('Error generating summary:', error);
-        summaryContent.innerHTML = '<div class="ai-error">Failed to generate summary. Please try again.</div>';
-        aiButton.innerHTML = 'Summary';
-        showError('Failed to generate summary');
+        summaryContent.innerHTML = '<div class="ai-error">Failed. Try again.</div>';
+        aiButton.textContent = '◈';
+        showError('Failed to generate');
     } finally {
         aiButton.disabled = false;
     }
@@ -497,6 +514,20 @@ function showError(message) {
     showToast(message, 'error');
 }
 
+// Toggle Central Q&A Section
+function toggleCentralQA() {
+    const content = document.getElementById('centralQAContent');
+    const icon = document.getElementById('qaToggleIcon');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        icon.textContent = '▲';
+    } else {
+        content.style.display = 'none';
+        icon.textContent = '▼';
+    }
+}
+
 // Central Q&A - Handle Enter key press
 function handleCentralQuestionKeyPress(event) {
     if (event.key === 'Enter') {
@@ -526,16 +557,10 @@ async function askCentralQuestion() {
     
     // Add question to history immediately
     const qaItem = document.createElement('div');
-    qaItem.className = 'central-qa-item';
+    qaItem.className = 'qa-item-compact';
     qaItem.innerHTML = `
-        <div class="central-qa-question">
-            <div class="qa-icon">❓</div>
-            <div class="qa-text">${escapeHtml(question)}</div>
-        </div>
-        <div class="central-qa-answer">
-            <div class="qa-icon">🤖</div>
-            <div class="qa-text"><span class="ai-loading">Analyzing your contacts...</span></div>
-        </div>
+        <div class="qa-q"><strong>Q:</strong> ${escapeHtml(question)}</div>
+        <div class="qa-a"><strong>A:</strong> <span class="ai-loading">...</span></div>
     `;
     qaHistory.insertBefore(qaItem, qaHistory.firstChild);
     
@@ -553,25 +578,25 @@ async function askCentralQuestion() {
             const data = await response.json();
             
             // Update the answer in the history
-            const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
-            answerText.innerHTML = escapeHtml(data.answer);
+            const answerDiv = qaItem.querySelector('.qa-a');
+            answerDiv.innerHTML = `<strong>A:</strong> ${escapeHtml(data.answer)}`;
             
             // Scroll to top to see the new answer
             qaItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } else {
             const error = await response.json();
-            const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
-            answerText.innerHTML = `<span class="ai-error">${escapeHtml(error.error || 'Failed to get answer. Make sure GEMINI_API_KEY is configured.')}</span>`;
+            const answerDiv = qaItem.querySelector('.qa-a');
+            answerDiv.innerHTML = `<strong>A:</strong> <span class="ai-error">${escapeHtml(error.error || 'Failed. Check API key.')}</span>`;
             showError(error.error || 'Failed to get answer');
         }
     } catch (error) {
         console.error('Error asking question:', error);
-        const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
-        answerText.innerHTML = '<span class="ai-error">Failed to get answer. Please try again.</span>';
+        const answerDiv = qaItem.querySelector('.qa-a');
+        answerDiv.innerHTML = '<strong>A:</strong> <span class="ai-error">Failed. Try again.</span>';
         showError('Failed to get answer');
     } finally {
         askButton.disabled = false;
-        askButton.innerHTML = 'Ask AI';
+        askButton.innerHTML = 'Ask';
     }
 }
 
