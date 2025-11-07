@@ -242,7 +242,7 @@ def delete_person(person_id):
 @app.route('/api/people/<person_id>/summary', methods=['POST'])
 @login_required
 def generate_summary(person_id):
-    """Generate AI summary for a person"""
+    """Generate AI summary for a person - creates a comprehensive person blueprint"""
     if not gemini_model:
         return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
     
@@ -256,19 +256,41 @@ def generate_summary(person_id):
         return jsonify({'error': 'No details available to summarize'}), 400
     
     try:
-        # Create prompt for the LLM
-        prompt = f"""You are a personal assistant helping to summarize contact information.
-
-Given the following raw details about a person named "{person['name']}", please create a clear, concise summary that:
-1. Extracts key information (phone, email, address, etc.) if present
-2. Summarizes main points from updates chronologically
-3. Highlights important facts
-4. Keeps it brief and easy to scan (3-5 bullet points max)
+        # Create enhanced prompt for comprehensive person blueprint
+        prompt = f"""You are an expert relationship manager and personal assistant. Analyze the following information about "{person['name']}" and create a comprehensive "Person Blueprint".
 
 Raw Details:
 {person['details']}
 
-Please format the response as a clean summary without any introductory phrases like "Here's a summary" or "Based on the information". Just provide the key points directly."""
+Create a detailed analysis with the following sections:
+
+## 📋 KEY INFORMATION
+Extract and list contact details, important dates, and basic facts.
+
+## 👤 WHO THEY ARE
+Describe their role, background, profession, interests, and key characteristics.
+
+## 💡 PERSONALITY TRAITS
+Analyze their personality based on interactions and notes. Include:
+- Communication style
+- Interests and passions
+- Values and priorities
+- Strengths and notable qualities
+
+## 🤝 HOW TO APPROACH
+Provide practical advice on:
+- Best ways to communicate with them
+- Topics they're interested in
+- Things to remember when interacting
+- Do's and don'ts
+
+## 📅 RELATIONSHIP TIMELINE
+Summarize key moments chronologically (when you met, important updates, last contact, etc.)
+
+## 💭 QUICK INSIGHTS
+3-5 bullet points of the most important things to remember about this person.
+
+Format the response in clear sections with appropriate spacing. Be insightful, practical, and personable. Focus on actionable insights that help build better relationships."""
 
         # Call Google Gemini API with safety settings
         from google.generativeai.types import HarmCategory, HarmBlockThreshold
@@ -299,6 +321,85 @@ Please format the response as a clean summary without any introductory phrases l
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Failed to generate summary: {str(e)}'}), 500
+
+@app.route('/api/ask', methods=['POST'])
+@login_required
+def central_ask():
+    """Central Q&A - Ask questions about any person or across all people"""
+    if not gemini_model:
+        return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
+    
+    data = request.get_json()
+    question = data.get('question', '').strip()
+    
+    if not question:
+        return jsonify({'error': 'Question is required'}), 400
+    
+    people = read_data()
+    
+    if not people:
+        return jsonify({'error': 'No people in your contacts yet'}), 400
+    
+    try:
+        # Build comprehensive context from all people
+        context = "You have access to information about the following people:\n\n"
+        
+        for person in people:
+            context += f"=== {person['name']} ===\n"
+            if person.get('details'):
+                context += f"{person['details']}\n"
+            else:
+                context += "No details available.\n"
+            context += "\n"
+        
+        # Create prompt for central Q&A
+        prompt = f"""You are a personal assistant helping manage relationships and contacts. You have access to notes about multiple people.
+
+{context}
+
+User Question: {question}
+
+Instructions:
+1. Analyze the question and determine which person(s) it relates to
+2. Provide a clear, helpful answer based on the available information
+3. If the question is about a specific person, mention their name in your answer
+4. If the question involves multiple people, list them clearly
+5. If the information isn't available, say so honestly
+6. Be conversational and helpful
+7. Keep answers concise (2-4 sentences) unless more detail is needed
+
+Answer the question now:"""
+
+        # Call Google Gemini API with safety settings
+        from google.generativeai.types import HarmCategory, HarmBlockThreshold
+        
+        response = gemini_model.generate_content(
+            prompt,
+            safety_settings={
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            }
+        )
+        
+        # Check if response has text
+        if not response.text:
+            return jsonify({'error': 'No answer generated. Please try again.'}), 500
+        
+        answer = response.text.strip()
+        
+        return jsonify({
+            'question': question,
+            'answer': answer,
+            'generated_at': datetime.now().isoformat()
+        })
+    
+    except Exception as e:
+        print(f"Error answering question: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to answer question: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

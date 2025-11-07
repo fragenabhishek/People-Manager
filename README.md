@@ -9,10 +9,24 @@ A simple and modern web application built with Python Flask to manage people's i
 - ✨ **Add People**: Store name and details/summary for each person
 - 🔍 **Search**: Search people by name in real-time
 - 👁️ **View Details**: Click on any person's name to view their details
-- ✏️ **Update**: Edit person's information
+- ✏️ **Update**: Edit person's information with timestamped updates
 - 🗑️ **Delete**: Remove people from the database
-- 💾 **Cloud Storage**: Data stored in MongoDB Atlas (cloud database)
-- 🎨 **Modern UI**: Beautiful gradient design with smooth animations
+- 🧠 **AI Person Blueprint**: Generate comprehensive personality profiles including:
+  - Key contact information
+  - Who they are and their background
+  - Personality traits and communication style
+  - How to approach and interact with them
+  - Relationship timeline and important moments
+  - Quick insights and key takeaways
+- 💬 **Central AI Q&A**: Ask questions about any person from one powerful interface:
+  - "Who did I meet this week?"
+  - "Who should I follow up with?"
+  - "Who are my AI/ML contacts?"
+  - "When did I meet Sarah?"
+  - Searches across all your contacts intelligently
+- 💾 **Cloud Storage**: Data stored in MongoDB Atlas (cloud database) or JSON file (local)
+- 🔐 **Password Protected**: Secure login system
+- 🎨 **Modern UI**: Clean, minimalist design with smooth animations
 
 ## Quick Start (Local Development)
 
@@ -79,13 +93,23 @@ people-manager/
 
 ## API Endpoints
 
-- `GET /` - Main UI
+### Authentication
+- `GET /login` - Login page
+- `POST /login` - Authenticate user
+- `GET /logout` - Logout user
+
+### People Management
+- `GET /` - Main UI (requires authentication)
 - `GET /api/people` - Get all people
 - `GET /api/people/<id>` - Get specific person
 - `GET /api/people/search/<query>` - Search by name
 - `POST /api/people` - Add new person
 - `PUT /api/people/<id>` - Update person
 - `DELETE /api/people/<id>` - Delete person
+
+### AI Features (requires GEMINI_API_KEY)
+- `POST /api/people/<id>/summary` - Generate comprehensive person blueprint
+- `POST /api/ask` - **Central Q&A** - Ask questions about any person or across all contacts
 
 ## Technologies Used
 

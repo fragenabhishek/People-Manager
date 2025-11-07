@@ -26,6 +26,29 @@
             <input type="text" id="searchInput" placeholder="Search by name..." class="search-input">
         </div>
 
+        <!-- Central AI Q&A Section -->
+        <div class="central-qa-section">
+            <div class="central-qa-header">
+                <h2>💬 Ask Anything About Your Contacts</h2>
+                <p class="qa-subtitle">Ask questions like "Who did I meet this week?" or "Who should I follow up with?"</p>
+            </div>
+            <div class="central-qa-input-group">
+                <input 
+                    type="text" 
+                    id="centralQuestionInput" 
+                    class="central-question-input" 
+                    placeholder='e.g., "Who are my AI contacts?" or "When did I meet Sarah?"'
+                    onkeypress="handleCentralQuestionKeyPress(event)"
+                >
+                <button class="btn btn-primary btn-ask-central" id="centralAskBtn" onclick="askCentralQuestion()">
+                    Ask AI
+                </button>
+            </div>
+            <div class="central-qa-history" id="centralQAHistory" style="display: none;">
+                <!-- Q&A history will appear here -->
+            </div>
+        </div>
+
         <!-- Add New Person Button -->
         <div class="action-section">
             <button id="addPersonBtn" class="btn btn-primary">Add Person</button>

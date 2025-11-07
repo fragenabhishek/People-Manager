@@ -1,5 +1,6 @@
 // API Base URL
 const API_URL = '/api/people';
+const ASK_API_URL = '/api/ask';
 
 // DOM Elements
 const peopleGrid = document.getElementById('peopleGrid');
@@ -93,10 +94,10 @@ function renderPeople(people) {
                     <div class="person-details">${person.details}</div>
                 ` : '<div class="no-details">No details available</div>'}
                 
-                <!-- AI Summary Section -->
+                <!-- AI Blueprint Section -->
                 <div class="ai-summary-section" id="summary-section-${person.id}" style="display: none;">
                     <div class="ai-summary-header">
-                        <span class="ai-badge">Summary</span>
+                        <span class="ai-badge">🧠 Person Blueprint</span>
                     </div>
                     <div class="ai-summary-content" id="summary-content-${person.id}"></div>
                 </div>
@@ -105,8 +106,8 @@ function renderPeople(people) {
             <div class="person-actions">
                 <button class="btn btn-edit" onclick="editPerson('${person.id}')">Edit</button>
                 <button class="btn btn-update" onclick="updatePersonInfo('${person.id}')">Update</button>
-                <button class="btn btn-ai" onclick="generateAISummary('${person.id}')" id="ai-btn-${person.id}">
-                    Summary
+                <button class="btn btn-ai btn-blueprint" onclick="generateAISummary('${person.id}')" id="ai-btn-${person.id}">
+                    🧠 Blueprint
                 </button>
                 <button class="btn btn-danger" onclick="deletePerson('${person.id}')">Delete</button>
             </div>
@@ -494,5 +495,90 @@ function showSuccess(message) {
 // Show error message
 function showError(message) {
     showToast(message, 'error');
+}
+
+// Central Q&A - Handle Enter key press
+function handleCentralQuestionKeyPress(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        askCentralQuestion();
+    }
+}
+
+// Central Q&A - Ask a question about any person
+async function askCentralQuestion() {
+    const questionInput = document.getElementById('centralQuestionInput');
+    const question = questionInput.value.trim();
+    const askButton = document.getElementById('centralAskBtn');
+    const qaHistory = document.getElementById('centralQAHistory');
+    
+    if (!question) {
+        showError('Please enter a question');
+        return;
+    }
+    
+    // Show history section if hidden
+    qaHistory.style.display = 'block';
+    
+    // Show loading state
+    askButton.disabled = true;
+    askButton.innerHTML = '<span class="loading-spinner">⏳</span> Thinking...';
+    
+    // Add question to history immediately
+    const qaItem = document.createElement('div');
+    qaItem.className = 'central-qa-item';
+    qaItem.innerHTML = `
+        <div class="central-qa-question">
+            <div class="qa-icon">❓</div>
+            <div class="qa-text">${escapeHtml(question)}</div>
+        </div>
+        <div class="central-qa-answer">
+            <div class="qa-icon">🤖</div>
+            <div class="qa-text"><span class="ai-loading">Analyzing your contacts...</span></div>
+        </div>
+    `;
+    qaHistory.insertBefore(qaItem, qaHistory.firstChild);
+    
+    // Clear input
+    questionInput.value = '';
+    
+    try {
+        const response = await fetch(ASK_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update the answer in the history
+            const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
+            answerText.innerHTML = escapeHtml(data.answer);
+            
+            // Scroll to top to see the new answer
+            qaItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            const error = await response.json();
+            const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
+            answerText.innerHTML = `<span class="ai-error">${escapeHtml(error.error || 'Failed to get answer. Make sure GEMINI_API_KEY is configured.')}</span>`;
+            showError(error.error || 'Failed to get answer');
+        }
+    } catch (error) {
+        console.error('Error asking question:', error);
+        const answerText = qaItem.querySelector('.central-qa-answer .qa-text');
+        answerText.innerHTML = '<span class="ai-error">Failed to get answer. Please try again.</span>';
+        showError('Failed to get answer');
+    } finally {
+        askButton.disabled = false;
+        askButton.innerHTML = 'Ask AI';
+    }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
