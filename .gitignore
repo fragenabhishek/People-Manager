@@ -36,6 +36,7 @@ instance/
 
 # Data files (user data - don't commit)
 data.json
+users.json
 
 # Chat history and notes (local only)
 CHAT_HISTORY.md

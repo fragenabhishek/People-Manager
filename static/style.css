@@ -771,6 +771,26 @@ form {
     font-size: 0.875rem;
 }
 
+.success-message {
+    background: #efe;
+    border: 1px solid #cfc;
+    color: #383;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+}
+
+.login-help a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-help a:hover {
+    text-decoration: underline;
+}
+
 .login-help {
     margin-top: 2rem;
     padding-top: 2rem;

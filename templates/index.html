@@ -15,7 +15,7 @@
             <div class="header-content">
                 <div>
                     <h1>People Manager</h1>
-                    <p class="subtitle">Simple contact management</p>
+                    <p class="subtitle">Welcome, {{ session.username }}</p>
                 </div>
                 <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-logout">Logout</a>
             </div>

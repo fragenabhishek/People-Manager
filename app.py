@@ -14,13 +14,6 @@ bcrypt = Bcrypt(app)
 # Secret key for session management
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# App password (hashed) - Change this password!
-# To set custom password, set APP_PASSWORD environment variable
-# Default password: "admin123" (change this!)
-APP_PASSWORD_HASH = bcrypt.generate_password_hash(
-    os.environ.get('APP_PASSWORD', 'admin123')
-).decode('utf-8')
-
 # Configuration - Use MongoDB if MONGO_URI is set, otherwise use JSON file
 MONGO_URI = os.environ.get('MONGO_URI')
 USE_MONGODB = MONGO_URI is not None
@@ -39,19 +32,81 @@ if USE_MONGODB:
     client = MongoClient(MONGO_URI)
     db = client['people_manager']
     people_collection = db['people']
+    users_collection = db['users']
     print("✓ Connected to MongoDB")
 else:
     # JSON File Setup
     DATA_FILE = 'data.json'
+    USERS_FILE = 'users.json'
+    
     if not os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'w') as f:
             json.dump([], f)
+    
+    if not os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'w') as f:
+            json.dump([], f)
+    
     print("✓ Using JSON file storage")
 
-def read_data():
-    """Read data from MongoDB or JSON file"""
+def read_users():
+    """Read users from MongoDB or JSON file"""
     if USE_MONGODB:
-        people = list(people_collection.find())
+        users = list(users_collection.find())
+        for user in users:
+            user['_id'] = str(user['_id'])
+        return users
+    else:
+        try:
+            with open(USERS_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return []
+
+def write_users(users):
+    """Write users to JSON file (MongoDB handles itself)"""
+    if not USE_MONGODB:
+        with open(USERS_FILE, 'w') as f:
+            json.dump(users, f, indent=2)
+
+def get_user_by_username(username):
+    """Get user by username"""
+    if USE_MONGODB:
+        user = users_collection.find_one({'username': username})
+        if user:
+            user['_id'] = str(user['_id'])
+        return user
+    else:
+        users = read_users()
+        return next((u for u in users if u['username'] == username), None)
+
+def create_user(username, password, email=None):
+    """Create a new user"""
+    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    new_user = {
+        'id': str(int(datetime.now().timestamp() * 1000)),
+        'username': username,
+        'password_hash': password_hash,
+        'email': email,
+        'created_at': datetime.now().isoformat()
+    }
+    
+    if USE_MONGODB:
+        result = users_collection.insert_one(new_user)
+        new_user['_id'] = str(result.inserted_id)
+    else:
+        users = read_users()
+        users.append(new_user)
+        write_users(users)
+    
+    return new_user
+
+def read_data(user_id=None):
+    """Read data from MongoDB or JSON file, filtered by user_id if provided"""
+    if USE_MONGODB:
+        query = {'user_id': user_id} if user_id else {}
+        people = list(people_collection.find(query))
         # Convert ObjectId to string for JSON serialization
         for person in people:
             person['_id'] = str(person['_id'])
@@ -61,7 +116,10 @@ def read_data():
     else:
         try:
             with open(DATA_FILE, 'r') as f:
-                return json.load(f)
+                all_people = json.load(f)
+                if user_id:
+                    return [p for p in all_people if p.get('user_id') == user_id]
+                return all_people
         except:
             return []
 
@@ -74,10 +132,11 @@ def write_data(data):
         with open(DATA_FILE, 'w') as f:
             json.dump(data, f, indent=2)
 
-def create_person(data):
+def create_person(data, user_id):
     """Create a new person in MongoDB or JSON"""
     new_person = {
         'id': str(int(datetime.now().timestamp() * 1000)),
+        'user_id': user_id,
         'name': data['name'],
         'details': data.get('details', ''),
         'createdAt': datetime.now().isoformat(),
@@ -148,22 +207,70 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration"""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        confirm_password = request.form.get('confirm_password', '').strip()
+        email = request.form.get('email', '').strip()
+        
+        # Validation
+        if not username or not password:
+            return render_template('register.html', error='Username and password are required')
+        
+        if len(username) < 3:
+            return render_template('register.html', error='Username must be at least 3 characters')
+        
+        if len(password) < 6:
+            return render_template('register.html', error='Password must be at least 6 characters')
+        
+        if password != confirm_password:
+            return render_template('register.html', error='Passwords do not match')
+        
+        # Check if username already exists
+        if get_user_by_username(username):
+            return render_template('register.html', error='Username already exists')
+        
+        # Create user
+        try:
+            create_user(username, password, email)
+            return redirect(url_for('login', registered='true'))
+        except Exception as e:
+            print(f"Error creating user: {str(e)}")
+            return render_template('register.html', error='Failed to create account. Please try again.')
+    
+    return render_template('register.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page"""
     if request.method == 'POST':
-        password = request.form.get('password')
-        if bcrypt.check_password_hash(APP_PASSWORD_HASH, password):
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        if not username or not password:
+            return render_template('login.html', error='Username and password are required')
+        
+        user = get_user_by_username(username)
+        
+        if user and bcrypt.check_password_hash(user['password_hash'], password):
             session['logged_in'] = True
+            session['user_id'] = user['id']
+            session['username'] = user['username']
             return redirect(url_for('index'))
         else:
-            return render_template('login.html', error='Invalid password')
-    return render_template('login.html')
+            return render_template('login.html', error='Invalid username or password')
+    
+    # Check if just registered
+    registered = request.args.get('registered')
+    return render_template('login.html', registered=registered)
 
 @app.route('/logout')
 def logout():
     """Logout"""
-    session.pop('logged_in', None)
+    session.clear()
     return redirect(url_for('login'))
 
 @app.route('/')
@@ -175,15 +282,17 @@ def index():
 @app.route('/api/people', methods=['GET'])
 @login_required
 def get_people():
-    """Get all people"""
-    people = read_data()
+    """Get all people for the logged-in user"""
+    user_id = session.get('user_id')
+    people = read_data(user_id=user_id)
     return jsonify(people)
 
 @app.route('/api/people/<person_id>', methods=['GET'])
 @login_required
 def get_person(person_id):
     """Get a specific person by ID"""
-    people = read_data()
+    user_id = session.get('user_id')
+    people = read_data(user_id=user_id)
     person = next((p for p in people if p['id'] == person_id), None)
     
     if person:
@@ -193,8 +302,9 @@ def get_person(person_id):
 @app.route('/api/people/search/<query>', methods=['GET'])
 @login_required
 def search_people(query):
-    """Search people by name"""
-    people = read_data()
+    """Search people by name for the logged-in user"""
+    user_id = session.get('user_id')
+    people = read_data(user_id=user_id)
     query_lower = query.lower()
     
     results = [
@@ -208,12 +318,13 @@ def search_people(query):
 @login_required
 def add_person():
     """Add a new person"""
+    user_id = session.get('user_id')
     data = request.get_json()
     
     if not data.get('name'):
         return jsonify({'error': 'Name is required'}), 400
     
-    new_person = create_person(data)
+    new_person = create_person(data, user_id)
     return jsonify(new_person), 201
 
 @app.route('/api/people/<person_id>', methods=['PUT'])
@@ -329,13 +440,14 @@ def central_ask():
     if not gemini_model:
         return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
     
+    user_id = session.get('user_id')
     data = request.get_json()
     question = data.get('question', '').strip()
     
     if not question:
         return jsonify({'error': 'Question is required'}), 400
     
-    people = read_data()
+    people = read_data(user_id=user_id)
     
     if not people:
         return jsonify({'error': 'No people in your contacts yet'}), 400
