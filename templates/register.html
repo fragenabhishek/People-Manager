@@ -16,7 +16,7 @@
             <div class="error-message">{{ error }}</div>
             {% endif %}
 
-            <form method="POST" action="{{ url_for('register') }}">
+            <form method="POST" action="{{ url_for('auth_routes.register') }}">
                 <div class="form-group">
                     <label for="username">Username *</label>
                     <input type="text" id="username" name="username" 
@@ -48,7 +48,7 @@
             </form>
 
             <div class="login-help">
-                <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+                <p>Already have an account? <a href="{{ url_for('auth_routes.login') }}">Login here</a></p>
             </div>
         </div>
     </div>

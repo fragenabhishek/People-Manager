@@ -1,519 +1,132 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+"""
+People Manager Application
+Refactored with SOLID principles and clean architecture
+
+Architecture:
+- Config: Centralized configuration management
+- Models: Domain entities (Person, User)
+- Repositories: Data access layer with abstraction
+- Services: Business logic layer
+- Routes: API endpoints (separated by domain)
+- Middleware: Cross-cutting concerns (auth)
+- Utils: Validation, logging, response formatting
+"""
+from flask import Flask, render_template
 from flask_bcrypt import Bcrypt
-import json
-import os
-from datetime import datetime
 from pymongo import MongoClient
-from bson import ObjectId
-from functools import wraps
-import google.generativeai as genai
 
-app = Flask(__name__)
-bcrypt = Bcrypt(app)
+from config import Config
+from utils.logger import setup_logger
+from middleware import login_required
 
-# Secret key for session management
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+# Import repositories
+from repositories.person_repository import PersonRepository
+from repositories.user_repository import UserRepository
 
-# Configuration - Use MongoDB if MONGO_URI is set, otherwise use JSON file
-MONGO_URI = os.environ.get('MONGO_URI')
-USE_MONGODB = MONGO_URI is not None
+# Import services
+from services.auth_service import AuthService
+from services.person_service import PersonService
+from services.ai_service import AIService
 
-# Google Gemini Configuration (optional - feature disabled if not set)
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    # Use gemini-2.5-flash (free tier, fast and stable)
-    gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-else:
-    gemini_model = None
+# Import routes
+from routes import auth_bp, person_bp, ai_bp
+from routes.auth_routes import init_auth_routes
+from routes.person_routes import init_person_routes
+from routes.ai_routes import init_ai_routes
 
-if USE_MONGODB:
-    # MongoDB Setup
-    client = MongoClient(MONGO_URI)
-    db = client['people_manager']
-    people_collection = db['people']
-    users_collection = db['users']
-    print("✓ Connected to MongoDB")
-else:
-    # JSON File Setup
-    DATA_FILE = 'data.json'
-    USERS_FILE = 'users.json'
+# Initialize logger
+logger = setup_logger('people_manager')
+
+
+def create_app() -> Flask:
+    """
+    Application factory pattern
+    Creates and configures the Flask application
     
-    if not os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'w') as f:
-            json.dump([], f)
+    Returns:
+        Configured Flask application instance
+    """
+    # Create Flask app
+    app = Flask(__name__)
+    app.secret_key = Config.SECRET_KEY
     
-    if not os.path.exists(USERS_FILE):
-        with open(USERS_FILE, 'w') as f:
-            json.dump([], f)
+    # Initialize Bcrypt
+    bcrypt = Bcrypt(app)
     
-    print("✓ Using JSON file storage")
+    # Validate configuration
+    Config.validate()
+    
+    # Initialize database connections and repositories
+    people_repo, user_repo = initialize_repositories()
+    
+    # Initialize services (Dependency Injection)
+    auth_service = AuthService(user_repo, bcrypt)
+    person_service = PersonService(people_repo)
+    ai_service = AIService()
+    
+    # Initialize routes with their dependencies
+    init_auth_routes(auth_service)
+    init_person_routes(person_service)
+    init_ai_routes(ai_service, person_service)
+    
+    # Register blueprints
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(person_bp)
+    app.register_blueprint(ai_bp)
+    
+    # Register main routes
+    register_main_routes(app)
+    
+    logger.info("Application initialized successfully")
+    
+    return app
 
-def read_users():
-    """Read users from MongoDB or JSON file"""
-    if USE_MONGODB:
-        users = list(users_collection.find())
-        for user in users:
-            user['_id'] = str(user['_id'])
-        return users
+
+def initialize_repositories():
+    """
+    Initialize repositories based on configuration
+    Implements Dependency Inversion: depends on abstractions
+    
+    Returns:
+        Tuple of (PersonRepository, UserRepository)
+    """
+    if Config.USE_MONGODB:
+        # MongoDB setup
+        client = MongoClient(Config.MONGO_URI)
+        db = client[Config.DB_NAME]
+        people_collection = db[Config.PEOPLE_COLLECTION]
+        users_collection = db[Config.USERS_COLLECTION]
+        
+        people_repo = PersonRepository(people_collection=people_collection)
+        user_repo = UserRepository(users_collection=users_collection)
     else:
-        try:
-            with open(USERS_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            return []
-
-def write_users(users):
-    """Write users to JSON file (MongoDB handles itself)"""
-    if not USE_MONGODB:
-        with open(USERS_FILE, 'w') as f:
-            json.dump(users, f, indent=2)
-
-def get_user_by_username(username):
-    """Get user by username"""
-    if USE_MONGODB:
-        user = users_collection.find_one({'username': username})
-        if user:
-            user['_id'] = str(user['_id'])
-        return user
-    else:
-        users = read_users()
-        return next((u for u in users if u['username'] == username), None)
-
-def create_user(username, password, email=None):
-    """Create a new user"""
-    password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        # JSON file setup
+        people_repo = PersonRepository(data_file=Config.DATA_FILE)
+        user_repo = UserRepository(data_file=Config.USERS_FILE)
     
-    new_user = {
-        'id': str(int(datetime.now().timestamp() * 1000)),
-        'username': username,
-        'password_hash': password_hash,
-        'email': email,
-        'created_at': datetime.now().isoformat()
-    }
+    return people_repo, user_repo
+
+
+def register_main_routes(app: Flask):
+    """Register main application routes"""
     
-    if USE_MONGODB:
-        result = users_collection.insert_one(new_user)
-        new_user['_id'] = str(result.inserted_id)
-    else:
-        users = read_users()
-        users.append(new_user)
-        write_users(users)
-    
-    return new_user
+    @app.route('/')
+    @login_required
+    def index():
+        """Render main page"""
+        from flask import session
+        return render_template('index.html', session=session)
 
-def read_data(user_id=None):
-    """Read data from MongoDB or JSON file, filtered by user_id if provided"""
-    if USE_MONGODB:
-        query = {'user_id': user_id} if user_id else {}
-        people = list(people_collection.find(query))
-        # Convert ObjectId to string for JSON serialization
-        for person in people:
-            person['_id'] = str(person['_id'])
-            if 'id' not in person:
-                person['id'] = person['_id']
-        return people
-    else:
-        try:
-            with open(DATA_FILE, 'r') as f:
-                all_people = json.load(f)
-                if user_id:
-                    return [p for p in all_people if p.get('user_id') == user_id]
-                return all_people
-        except:
-            return []
 
-def write_data(data):
-    """Write data to MongoDB or JSON file"""
-    if USE_MONGODB:
-        # MongoDB handles data differently, so this is not used
-        pass
-    else:
-        with open(DATA_FILE, 'w') as f:
-            json.dump(data, f, indent=2)
+# Create application instance
+app = create_app()
 
-def create_person(data, user_id):
-    """Create a new person in MongoDB or JSON"""
-    new_person = {
-        'id': str(int(datetime.now().timestamp() * 1000)),
-        'user_id': user_id,
-        'name': data['name'],
-        'details': data.get('details', ''),
-        'createdAt': datetime.now().isoformat(),
-        'updatedAt': datetime.now().isoformat()
-    }
-    
-    if USE_MONGODB:
-        result = people_collection.insert_one(new_person)
-        new_person['_id'] = str(result.inserted_id)
-    else:
-        people = read_data()
-        people.append(new_person)
-        write_data(people)
-    
-    return new_person
-
-def update_person_data(person_id, data):
-    """Update a person in MongoDB or JSON"""
-    if USE_MONGODB:
-        update_data = {
-            'name': data.get('name'),
-            'details': data.get('details', ''),
-            'updatedAt': datetime.now().isoformat()
-        }
-        result = people_collection.find_one_and_update(
-            {'id': person_id},
-            {'$set': update_data},
-            return_document=True
-        )
-        if result:
-            result['_id'] = str(result['_id'])
-            return result
-        return None
-    else:
-        people = read_data()
-        person_index = next((i for i, p in enumerate(people) if p['id'] == person_id), None)
-        if person_index is None:
-            return None
-        
-        person = people[person_index]
-        person['name'] = data.get('name', person['name'])
-        person['details'] = data.get('details', person.get('details', ''))
-        person['updatedAt'] = datetime.now().isoformat()
-        people[person_index] = person
-        write_data(people)
-        return person
-
-def delete_person_data(person_id):
-    """Delete a person from MongoDB or JSON"""
-    if USE_MONGODB:
-        result = people_collection.delete_one({'id': person_id})
-        return result.deleted_count > 0
-    else:
-        people = read_data()
-        original_length = len(people)
-        people = [p for p in people if p['id'] != person_id]
-        if len(people) == original_length:
-            return False
-        write_data(people)
-        return True
-
-# Login required decorator
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    """User registration"""
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        confirm_password = request.form.get('confirm_password', '').strip()
-        email = request.form.get('email', '').strip()
-        
-        # Validation
-        if not username or not password:
-            return render_template('register.html', error='Username and password are required')
-        
-        if len(username) < 3:
-            return render_template('register.html', error='Username must be at least 3 characters')
-        
-        if len(password) < 6:
-            return render_template('register.html', error='Password must be at least 6 characters')
-        
-        if password != confirm_password:
-            return render_template('register.html', error='Passwords do not match')
-        
-        # Check if username already exists
-        if get_user_by_username(username):
-            return render_template('register.html', error='Username already exists')
-        
-        # Create user
-        try:
-            create_user(username, password, email)
-            return redirect(url_for('login', registered='true'))
-        except Exception as e:
-            print(f"Error creating user: {str(e)}")
-            return render_template('register.html', error='Failed to create account. Please try again.')
-    
-    return render_template('register.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    """Login page"""
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '').strip()
-        
-        if not username or not password:
-            return render_template('login.html', error='Username and password are required')
-        
-        user = get_user_by_username(username)
-        
-        if user and bcrypt.check_password_hash(user['password_hash'], password):
-            session['logged_in'] = True
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            return redirect(url_for('index'))
-        else:
-            return render_template('login.html', error='Invalid username or password')
-    
-    # Check if just registered
-    registered = request.args.get('registered')
-    return render_template('login.html', registered=registered)
-
-@app.route('/logout')
-def logout():
-    """Logout"""
-    session.clear()
-    return redirect(url_for('login'))
-
-@app.route('/')
-@login_required
-def index():
-    """Render main page"""
-    return render_template('index.html')
-
-@app.route('/api/people', methods=['GET'])
-@login_required
-def get_people():
-    """Get all people for the logged-in user"""
-    user_id = session.get('user_id')
-    people = read_data(user_id=user_id)
-    return jsonify(people)
-
-@app.route('/api/people/<person_id>', methods=['GET'])
-@login_required
-def get_person(person_id):
-    """Get a specific person by ID"""
-    user_id = session.get('user_id')
-    people = read_data(user_id=user_id)
-    person = next((p for p in people if p['id'] == person_id), None)
-    
-    if person:
-        return jsonify(person)
-    return jsonify({'error': 'Person not found'}), 404
-
-@app.route('/api/people/search/<query>', methods=['GET'])
-@login_required
-def search_people(query):
-    """Search people by name for the logged-in user"""
-    user_id = session.get('user_id')
-    people = read_data(user_id=user_id)
-    query_lower = query.lower()
-    
-    results = [
-        person for person in people
-        if query_lower in person['name'].lower()
-    ]
-    
-    return jsonify(results)
-
-@app.route('/api/people', methods=['POST'])
-@login_required
-def add_person():
-    """Add a new person"""
-    user_id = session.get('user_id')
-    data = request.get_json()
-    
-    if not data.get('name'):
-        return jsonify({'error': 'Name is required'}), 400
-    
-    new_person = create_person(data, user_id)
-    return jsonify(new_person), 201
-
-@app.route('/api/people/<person_id>', methods=['PUT'])
-@login_required
-def update_person(person_id):
-    """Update an existing person"""
-    data = request.get_json()
-    person = update_person_data(person_id, data)
-    
-    if person is None:
-        return jsonify({'error': 'Person not found'}), 404
-    
-    return jsonify(person)
-
-@app.route('/api/people/<person_id>', methods=['DELETE'])
-@login_required
-def delete_person(person_id):
-    """Delete a person"""
-    success = delete_person_data(person_id)
-    
-    if not success:
-        return jsonify({'error': 'Person not found'}), 404
-    
-    return jsonify({'message': 'Person deleted successfully'})
-
-@app.route('/api/people/<person_id>/summary', methods=['POST'])
-@login_required
-def generate_summary(person_id):
-    """Generate AI summary for a person - creates a comprehensive person blueprint"""
-    if not gemini_model:
-        return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
-    
-    people = read_data()
-    person = next((p for p in people if p['id'] == person_id), None)
-    
-    if not person:
-        return jsonify({'error': 'Person not found'}), 404
-    
-    if not person.get('details'):
-        return jsonify({'error': 'No details available to summarize'}), 400
-    
-    try:
-        # Create enhanced prompt for comprehensive person blueprint
-        prompt = f"""You are an expert relationship manager and personal assistant. Analyze the following information about "{person['name']}" and create a comprehensive "Person Blueprint".
-
-Raw Details:
-{person['details']}
-
-Create a detailed analysis with the following sections:
-
-## 📋 KEY INFORMATION
-Extract and list contact details, important dates, and basic facts.
-
-## 👤 WHO THEY ARE
-Describe their role, background, profession, interests, and key characteristics.
-
-## 💡 PERSONALITY TRAITS
-Analyze their personality based on interactions and notes. Include:
-- Communication style
-- Interests and passions
-- Values and priorities
-- Strengths and notable qualities
-
-## 🤝 HOW TO APPROACH
-Provide practical advice on:
-- Best ways to communicate with them
-- Topics they're interested in
-- Things to remember when interacting
-- Do's and don'ts
-
-## 📅 RELATIONSHIP TIMELINE
-Summarize key moments chronologically (when you met, important updates, last contact, etc.)
-
-## 💭 QUICK INSIGHTS
-3-5 bullet points of the most important things to remember about this person.
-
-Format the response in clear sections with appropriate spacing. Be insightful, practical, and personable. Focus on actionable insights that help build better relationships."""
-
-        # Call Google Gemini API with safety settings
-        from google.generativeai.types import HarmCategory, HarmBlockThreshold
-        
-        response = gemini_model.generate_content(
-            prompt,
-            safety_settings={
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
-        )
-        
-        # Check if response has text
-        if not response.text:
-            return jsonify({'error': 'No summary generated. Please try again.'}), 500
-        
-        summary = response.text.strip()
-        
-        return jsonify({
-            'summary': summary,
-            'generated_at': datetime.now().isoformat()
-        })
-    
-    except Exception as e:
-        print(f"Error generating summary: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'Failed to generate summary: {str(e)}'}), 500
-
-@app.route('/api/ask', methods=['POST'])
-@login_required
-def central_ask():
-    """Central Q&A - Ask questions about any person or across all people"""
-    if not gemini_model:
-        return jsonify({'error': 'AI feature not configured. Please set GEMINI_API_KEY environment variable.'}), 503
-    
-    user_id = session.get('user_id')
-    data = request.get_json()
-    question = data.get('question', '').strip()
-    
-    if not question:
-        return jsonify({'error': 'Question is required'}), 400
-    
-    people = read_data(user_id=user_id)
-    
-    if not people:
-        return jsonify({'error': 'No people in your contacts yet'}), 400
-    
-    try:
-        # Build comprehensive context from all people
-        context = "You have access to information about the following people:\n\n"
-        
-        for person in people:
-            context += f"=== {person['name']} ===\n"
-            if person.get('details'):
-                context += f"{person['details']}\n"
-            else:
-                context += "No details available.\n"
-            context += "\n"
-        
-        # Create prompt for central Q&A
-        prompt = f"""You are a personal assistant helping manage relationships and contacts. You have access to notes about multiple people.
-
-{context}
-
-User Question: {question}
-
-Instructions:
-1. Analyze the question and determine which person(s) it relates to
-2. Provide a clear, helpful answer based on the available information
-3. If the question is about a specific person, mention their name in your answer
-4. If the question involves multiple people, list them clearly
-5. If the information isn't available, say so honestly
-6. Be conversational and helpful
-7. Keep answers concise (2-4 sentences) unless more detail is needed
-
-Answer the question now:"""
-
-        # Call Google Gemini API with safety settings
-        from google.generativeai.types import HarmCategory, HarmBlockThreshold
-        
-        response = gemini_model.generate_content(
-            prompt,
-            safety_settings={
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            }
-        )
-        
-        # Check if response has text
-        if not response.text:
-            return jsonify({'error': 'No answer generated. Please try again.'}), 500
-        
-        answer = response.text.strip()
-        
-        return jsonify({
-            'question': question,
-            'answer': answer,
-            'generated_at': datetime.now().isoformat()
-        })
-    
-    except Exception as e:
-        print(f"Error answering question: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'Failed to answer question: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-
+    """Run the application"""
+    logger.info(f"Starting server on {Config.HOST}:{Config.PORT}")
+    app.run(
+        host=Config.HOST,
+        port=Config.PORT,
+        debug=Config.DEBUG
+    )

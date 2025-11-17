@@ -80,16 +80,29 @@ The app will use JSON file storage locally. To use MongoDB, set the `MONGO_URI` 
 
 ```
 people-manager/
-├── app.py              # Flask backend + MongoDB support
+├── app.py              # Application entry point (clean, minimal)
+├── config/             # Configuration management
+├── models/             # Domain entities (Person, User)
+├── repositories/       # Data access layer (Repository pattern)
+├── services/           # Business logic layer
+├── routes/             # API endpoints (separated by domain)
+├── middleware/         # Cross-cutting concerns (auth)
+├── utils/              # Validation, logging, responses
+├── templates/          # HTML templates
+├── static/             # CSS, JS, images
 ├── requirements.txt    # Python dependencies
-├── render.yaml         # Render.com deployment config
-├── data.json          # Local JSON storage (fallback)
-├── templates/
-│   └── index.html     # Main UI
-└── static/
-    ├── script.js      # Frontend logic
-    └── style.css      # Styling
+└── data.json           # Local JSON storage (fallback)
 ```
+
+**Architecture Highlights:**
+- ✅ **SOLID Principles**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- ✅ **Clean Architecture**: Clear separation of concerns with layered design
+- ✅ **Repository Pattern**: Abstracted data access with interchangeable storage backends
+- ✅ **Service Layer**: Business logic separated from HTTP handling
+- ✅ **Dependency Injection**: Loose coupling, easy testing
+- ✅ **Type Safety**: Type hints throughout for better IDE support and error catching
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
 
 ## API Endpoints
 
@@ -121,12 +134,16 @@ people-manager/
 
 ## Technical Highlights
 
-- RESTful API design
-- Dual storage support (MongoDB + JSON fallback)
-- Click-to-expand details UI pattern
-- Real-time search
-- Responsive design
-- Modern gradient aesthetics
+- **SOLID Principles** - Professional, maintainable code architecture
+- **Clean Architecture** - Clear separation: Models, Repositories, Services, Routes
+- **Repository Pattern** - Abstracted data access, swappable storage backends
+- **Type Safety** - Full type hints for better development experience
+- **Centralized Validation** - All input validation in one place
+- **Proper Logging** - Structured logging throughout application
+- **Standardized Responses** - Consistent API response format
+- **RESTful API** - Well-designed RESTful endpoints
+- **Dual Storage** - MongoDB Atlas (cloud) or JSON (local)
+- **Modern UI** - Minimalist, responsive design
 
 ## Deployment
 
@@ -145,8 +162,17 @@ To deploy your own:
 
 ## Environment Variables
 
+- `SECRET_KEY` (optional) - Flask secret key for sessions
 - `MONGO_URI` (optional) - MongoDB connection string
+- `GEMINI_API_KEY` (optional) - Google Gemini API key for AI features
 - `PORT` (auto-set by Render) - Server port
+- `FLASK_DEBUG` (optional) - Enable debug mode (True/False)
+
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture and SOLID principles
+- **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** - Refactoring details and improvements
+- **[README.md](README.md)** - This file (overview and quickstart)
 
 ## License
 

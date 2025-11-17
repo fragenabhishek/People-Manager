@@ -38,6 +38,10 @@ instance/
 data.json
 users.json
 
+# Backup files
+app_old.py
+*_old.py
+
 # Chat history and notes (local only)
 CHAT_HISTORY.md
 AUTH_SETUP.md
