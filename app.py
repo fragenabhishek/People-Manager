@@ -111,11 +111,19 @@ def register_main_routes(app: Flask):
     """Register main application routes"""
     
     @app.route('/')
-    @login_required
     def index():
-        """Render main page"""
+        """Landing page or redirect to dashboard if logged in"""
         from flask import session
-        return render_template('index.html', session=session)
+        if session.get('logged_in'):
+            return render_template('dashboard.html', session=session)
+        return render_template('landing.html')
+    
+    @app.route('/dashboard')
+    @login_required
+    def dashboard():
+        """Dashboard for authenticated users"""
+        from flask import session
+        return render_template('dashboard.html', session=session)
 
 
 # Create application instance

@@ -3,55 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - People Manager</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Sign Up - People Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1>Create Account</h1>
-            <p class="login-subtitle">Join People Manager</p>
+    <div class="auth-container">
+        <!-- Back to Home -->
+        <div class="back-link">
+            <a href="{{ url_for('index') }}">← Back to Home</a>
+        </div>
 
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="brand">
+                    <span class="brand-icon">👥</span>
+                    <span class="brand-name">People Manager</span>
+                </div>
+                <h1>Get Started Free</h1>
+                <p class="auth-subtitle">Create your account in seconds</p>
+            </div>
+            
             {% if error %}
-            <div class="error-message">{{ error }}</div>
+            <div class="error-message">
+                <span class="message-icon">✕</span>
+                <span>{{ error }}</span>
+            </div>
             {% endif %}
-
-            <form method="POST" action="{{ url_for('auth_routes.register') }}">
+            
+            <form method="POST" action="{{ url_for('auth_routes.register') }}" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username *</label>
-                    <input type="text" id="username" name="username" 
-                           placeholder="Choose a username" 
-                           required minlength="3" autofocus>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        placeholder="Choose a username" 
+                        required 
+                        autofocus>
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email (optional)</label>
-                    <input type="email" id="email" name="email" 
-                           placeholder="your@email.com">
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="your@email.com">
                 </div>
-
+                
                 <div class="form-group">
                     <label for="password">Password *</label>
-                    <input type="password" id="password" name="password" 
-                           placeholder="At least 6 characters" 
-                           required minlength="6">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Create a strong password" 
+                        required>
+                    <small class="form-hint">At least 6 characters</small>
                 </div>
-
+                
                 <div class="form-group">
                     <label for="confirm_password">Confirm Password *</label>
-                    <input type="password" id="confirm_password" name="confirm_password" 
-                           placeholder="Re-enter password" 
-                           required minlength="6">
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        placeholder="Re-enter your password" 
+                        required>
                 </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    Create Account
+                    <span class="btn-arrow">→</span>
+                </button>
 
-                <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+                <p class="form-note">By signing up, you agree to keep your data secure and respect privacy.</p>
             </form>
-
-            <div class="login-help">
+            
+            <div class="auth-footer">
                 <p>Already have an account? <a href="{{ url_for('auth_routes.login') }}">Login here</a></p>
+            </div>
+        </div>
+
+        <div class="auth-visual">
+            <div class="visual-card card-1">
+                <div class="visual-icon">🎯</div>
+                <div class="visual-text">Track every connection</div>
+            </div>
+            <div class="visual-card card-2">
+                <div class="visual-icon">💡</div>
+                <div class="visual-text">Get smart insights</div>
+            </div>
+            <div class="visual-card card-3">
+                <div class="visual-icon">🔐</div>
+                <div class="visual-text">Secure & private</div>
             </div>
         </div>
     </div>
 </body>
 </html>
-

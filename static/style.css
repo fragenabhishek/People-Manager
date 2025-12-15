@@ -38,14 +38,34 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 2rem;
+}
+
+.header-left {
+    flex: 1;
+}
+
+.brand-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.brand-icon {
+    font-size: 1.75rem;
 }
 
 header h1 {
     font-size: 1.75rem;
     font-weight: 600;
-    margin-bottom: 0.25rem;
     color: var(--text-primary);
     letter-spacing: -0.02em;
+}
+
+.subtitle strong {
+    color: var(--accent);
+    font-weight: 600;
 }
 
 .subtitle {
@@ -585,24 +605,30 @@ header h1 {
 /* Empty State */
 .empty-state {
     text-align: center;
-    padding: 3rem 2rem;
+    padding: 4rem 2rem;
     border-top: 1px solid var(--border-color);
+    background: var(--bg-gray);
+    border-radius: 8px;
+    margin-top: 2rem;
 }
 
 .empty-icon {
-    display: none;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
 }
 
 .empty-state h3 {
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
     color: var(--text-primary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .empty-state p {
-    font-size: 0.875rem;
-    color: var(--text-muted);
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
 }
 
 /* Modal */

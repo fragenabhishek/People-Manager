@@ -66,7 +66,7 @@ def login():
             session['user_id'] = user.id
             session['username'] = user.username
             logger.info(f"User logged in: {username}")
-            return redirect(url_for('index'))
+            return redirect(url_for('dashboard'))
         else:
             return render_template('login.html', error='Invalid username or password')
     
@@ -81,5 +81,5 @@ def logout():
     username = session.get('username', 'unknown')
     session.clear()
     logger.info(f"User logged out: {username}")
-    return redirect(url_for('auth_routes.login'))
+    return redirect(url_for('index'))
 

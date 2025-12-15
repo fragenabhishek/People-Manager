@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>People Manager - Remember Everyone You Meet</title>
+    <meta name="description" content="Never forget a connection. AI-powered contact management that helps you remember and nurture every relationship.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">👥</span>
+                <span class="brand-name">People Manager</span>
+            </div>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#use-cases" class="nav-link">Use Cases</a>
+                <a href="{{ url_for('auth_routes.login') }}" class="btn btn-secondary-nav">Login</a>
+                <a href="{{ url_for('auth_routes.register') }}" class="btn btn-primary-nav">Get Started Free</a>
+            </div>
+            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#features" class="mobile-link" onclick="toggleMobileMenu()">Features</a>
+        <a href="#how-it-works" class="mobile-link" onclick="toggleMobileMenu()">How It Works</a>
+        <a href="#use-cases" class="mobile-link" onclick="toggleMobileMenu()">Use Cases</a>
+        <a href="{{ url_for('auth_routes.login') }}" class="mobile-link" onclick="toggleMobileMenu()">Login</a>
+        <a href="{{ url_for('auth_routes.register') }}" class="btn btn-primary-nav btn-block" onclick="toggleMobileMenu()">Get Started Free</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-background"></div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">✨ AI-Powered Contact Management</div>
+                <h1 class="hero-title">
+                    Never Forget a Connection.
+                    <span class="gradient-text">Remember Everyone.</span>
+                </h1>
+                <p class="hero-subtitle">
+                    The smart way to manage your relationships. Store details, get AI insights, 
+                    and never miss a follow-up. Perfect for professionals, networkers, and relationship builders.
+                </p>
+                <div class="hero-cta">
+                    <a href="{{ url_for('auth_routes.register') }}" class="btn btn-primary btn-large">
+                        Start Free Today
+                        <span class="btn-arrow">→</span>
+                    </a>
+                    <a href="#how-it-works" class="btn btn-secondary btn-large">
+                        See How It Works
+                    </a>
+                </div>
+                <p class="hero-note">No credit card required • Free forever • 2-minute setup</p>
+            </div>
+            <div class="hero-visual">
+                <div class="demo-card card-1">
+                    <div class="demo-card-header">
+                        <div class="demo-avatar">👤</div>
+                        <div>
+                            <div class="demo-name">Sarah Chen</div>
+                            <div class="demo-meta">Met at Tech Summit 2024</div>
+                        </div>
+                    </div>
+                    <div class="demo-tag">✨ AI Insight: Follow up this week</div>
+                </div>
+                <div class="demo-card card-2">
+                    <div class="demo-ai-badge">🤖 AI Blueprint</div>
+                    <div class="demo-text">Sarah is a product manager at TechCorp...</div>
+                </div>
+                <div class="demo-card card-3">
+                    <div class="demo-question">💬 Who are my AI contacts?</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Everything you need to manage relationships</h2>
+                <p class="section-subtitle">Simple, powerful tools to remember every connection</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3 class="feature-title">Smart Storage</h3>
+                    <p class="feature-description">
+                        Store names, details, meeting notes, and everything you need to remember about each person. Search instantly.
+                    </p>
+                </div>
+
+                <div class="feature-card highlight">
+                    <div class="feature-badge">✨ AI Powered</div>
+                    <div class="feature-icon">🧠</div>
+                    <h3 class="feature-title">AI Person Blueprints</h3>
+                    <p class="feature-description">
+                        Generate comprehensive personality profiles with key traits, communication styles, and interaction tips.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3 class="feature-title">Ask AI Anything</h3>
+                    <p class="feature-description">
+                        "Who did I meet this week?" "Who should I follow up with?" Get instant answers about your contacts.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3 class="feature-title">Instant Search</h3>
+                    <p class="feature-description">
+                        Find anyone instantly with real-time search. Filter by name, tags, or any detail you've added.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Lightning Fast</h3>
+                    <p class="feature-description">
+                        No bloat, no complexity. Just a clean, fast interface that gets out of your way and lets you work.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3 class="feature-title">Cloud Synced</h3>
+                    <p class="feature-description">
+                        Your data is securely stored in the cloud. Access from anywhere, on any device. Always in sync.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3 class="feature-title">Secure & Private</h3>
+                    <p class="feature-description">
+                        Your relationships are private. Password-protected with bank-level security. Your data stays yours.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Works Everywhere</h3>
+                    <p class="feature-description">
+                        Responsive design works perfectly on desktop, tablet, and mobile. Manage contacts from anywhere.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Get started in minutes, not hours</p>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Create Your Account</h3>
+                        <p class="step-description">
+                            Sign up in seconds. No credit card, no commitment. Just your email and you're ready to go.
+                        </p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-screen">
+                            <div class="screen-header"></div>
+                            <div class="screen-form"></div>
+                            <div class="screen-form short"></div>
+                            <div class="screen-button"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step step-reverse">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Add Your Contacts</h3>
+                        <p class="step-description">
+                            After a meeting or event, quickly add the person's name and any notes. Where you met, what you discussed, follow-up items.
+                        </p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-screen">
+                            <div class="screen-header"></div>
+                            <div class="screen-card"></div>
+                            <div class="screen-card"></div>
+                            <div class="screen-card"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Let AI Help</h3>
+                        <p class="step-description">
+                            Generate AI blueprints to understand personality traits. Ask questions like "Who should I follow up with?" and get instant answers.
+                        </p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-screen ai-screen">
+                            <div class="ai-sparkle">✨</div>
+                            <div class="screen-ai-text"></div>
+                            <div class="screen-ai-text short"></div>
+                            <div class="screen-ai-text"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step step-reverse">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3 class="step-title">Stay Connected</h3>
+                        <p class="step-description">
+                            Search, update, and review your contacts anytime. Never forget important details about the people in your network.
+                        </p>
+                    </div>
+                    <div class="step-visual">
+                        <div class="step-screen">
+                            <div class="screen-search"></div>
+                            <div class="screen-card small"></div>
+                            <div class="screen-card small"></div>
+                            <div class="screen-card small"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Use Cases Section -->
+    <section class="use-cases" id="use-cases">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Perfect for every relationship builder</h2>
+                <p class="section-subtitle">Whatever your role, People Manager helps you stay connected</p>
+            </div>
+
+            <div class="use-cases-grid">
+                <div class="use-case">
+                    <div class="use-case-icon">💼</div>
+                    <h3 class="use-case-title">Sales Professionals</h3>
+                    <p class="use-case-description">
+                        Track prospects, remember key details about clients, and never miss a follow-up. Build stronger relationships that close deals.
+                    </p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-icon">🎤</div>
+                    <h3 class="use-case-title">Event Networkers</h3>
+                    <p class="use-case-description">
+                        Met 50 people at a conference? Add them all with context. Remember who they are and what you discussed when you follow up.
+                    </p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-icon">🚀</div>
+                    <h3 class="use-case-title">Entrepreneurs</h3>
+                    <p class="use-case-description">
+                        Manage investors, advisors, partners, and customers. Keep track of every conversation and build your network strategically.
+                    </p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-icon">🎓</div>
+                    <h3 class="use-case-title">Students & Academics</h3>
+                    <p class="use-case-description">
+                        Remember classmates, professors, research contacts. Build your professional network while still in school.
+                    </p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-icon">🤝</div>
+                    <h3 class="use-case-title">Recruiters</h3>
+                    <p class="use-case-description">
+                        Track candidates, remember interview details, and maintain relationships with your talent pool for future opportunities.
+                    </p>
+                </div>
+
+                <div class="use-case">
+                    <div class="use-case-icon">✍️</div>
+                    <h3 class="use-case-title">Freelancers</h3>
+                    <p class="use-case-description">
+                        Manage clients, remember project details, and keep track of who referred you to whom. Build your freelance network.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">Ready to never forget a connection?</h2>
+                <p class="cta-subtitle">Join hundreds of professionals who are building better relationships</p>
+                <div class="cta-buttons">
+                    <a href="{{ url_for('auth_routes.register') }}" class="btn btn-primary btn-large">
+                        Get Started Free
+                        <span class="btn-arrow">→</span>
+                    </a>
+                </div>
+                <p class="cta-note">✓ No credit card required  ✓ Free forever  ✓ 2-minute setup</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="brand-icon">👥</span>
+                    <span class="brand-name">People Manager</span>
+                </div>
+                <div class="footer-links">
+                    <a href="{{ url_for('auth_routes.login') }}" class="footer-link">Login</a>
+                    <a href="{{ url_for('auth_routes.register') }}" class="footer-link">Sign Up</a>
+                    <a href="https://github.com/fragenabhishek/People-Manager" class="footer-link" target="_blank">GitHub</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 People Manager. Built with care for relationship builders.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('active');
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Add scroll animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card, .step, .use-case').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
+

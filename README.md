@@ -1,8 +1,25 @@
 # People Manager
 
-A simple and modern web application built with Python Flask to manage people's information.
+A professional, AI-powered contact management system with a modern service website interface built with Python Flask.
 
 🌐 **Live Demo**: [https://people-manager-kebr.onrender.com/](https://people-manager-kebr.onrender.com/)
+
+## ✨ What's New - Modern Landing Page!
+
+**🎨 Professional Service Website** - We've transformed People Manager with a beautiful landing page that:
+- **Welcomes visitors** with a professional hero section and animated visuals
+- **Explains features** through an engaging 8-card showcase
+- **Guides users** with a step-by-step "How It Works" section
+- **Shows use cases** for sales, networking, recruiting, and more
+- **Enhances auth pages** with modern gradient designs and animations
+- **Adapts responsively** across all devices (desktop, tablet, mobile)
+
+**🎯 Smart Routing** - Intelligent navigation based on authentication:
+- New visitors see the landing page explaining the service
+- Logged-in users go straight to their dashboard
+- Seamless experience with automatic detection
+
+📄 **[View Full Enhancement Details](ENHANCEMENT_SUMMARY.md)**
 
 ## Features
 

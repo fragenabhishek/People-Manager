@@ -4,23 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - People Manager</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1>People Manager</h1>
-            <p class="login-subtitle">Login to your account</p>
+    <div class="auth-container">
+        <!-- Back to Home -->
+        <div class="back-link">
+            <a href="{{ url_for('index') }}">← Back to Home</a>
+        </div>
+
+        <div class="auth-box">
+            <div class="auth-header">
+                <div class="brand">
+                    <span class="brand-icon">👥</span>
+                    <span class="brand-name">People Manager</span>
+                </div>
+                <h1>Welcome Back</h1>
+                <p class="auth-subtitle">Login to access your contacts</p>
+            </div>
             
             {% if registered %}
-            <div class="success-message">Account created successfully! Please login.</div>
+            <div class="success-message">
+                <span class="message-icon">✓</span>
+                <span>Account created successfully! Please login.</span>
+            </div>
             {% endif %}
             
             {% if error %}
-            <div class="error-message">{{ error }}</div>
+            <div class="error-message">
+                <span class="message-icon">✕</span>
+                <span>{{ error }}</span>
+            </div>
             {% endif %}
             
-            <form method="POST" action="{{ url_for('auth_routes.login') }}">
+            <form method="POST" action="{{ url_for('auth_routes.login') }}" class="auth-form">
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input 
@@ -42,14 +59,31 @@
                         required>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-block">Login</button>
+                <button type="submit" class="btn btn-primary btn-block">
+                    Login
+                    <span class="btn-arrow">→</span>
+                </button>
             </form>
             
-            <div class="login-help">
+            <div class="auth-footer">
                 <p>Don't have an account? <a href="{{ url_for('auth_routes.register') }}">Create one here</a></p>
+            </div>
+        </div>
+
+        <div class="auth-visual">
+            <div class="visual-card card-1">
+                <div class="visual-icon">🤝</div>
+                <div class="visual-text">Manage all your contacts</div>
+            </div>
+            <div class="visual-card card-2">
+                <div class="visual-icon">🧠</div>
+                <div class="visual-text">AI-powered insights</div>
+            </div>
+            <div class="visual-card card-3">
+                <div class="visual-icon">⚡</div>
+                <div class="visual-text">Never forget anyone</div>
             </div>
         </div>
     </div>
 </body>
 </html>
-

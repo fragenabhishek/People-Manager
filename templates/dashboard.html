@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - People Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="brand-header">
+                        <span class="brand-icon">👥</span>
+                        <h1>People Manager</h1>
+                    </div>
+                    <p class="subtitle">Welcome back, <strong>{{ session.username }}</strong> 👋</p>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('auth_routes.logout') }}" class="btn btn-secondary btn-logout">Logout</a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search Bar -->
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search by name..." class="search-input">
+        </div>
+
+        <!-- Central AI Q&A Section - Minimalist & Collapsible -->
+        <div class="central-qa-compact" id="centralQACompact">
+            <div class="qa-toggle-bar" onclick="toggleCentralQA()">
+                <span class="qa-toggle-text">💬 Ask AI about contacts</span>
+                <span class="qa-toggle-icon" id="qaToggleIcon">▼</span>
+            </div>
+            <div class="central-qa-content" id="centralQAContent" style="display: none;">
+                <div class="central-qa-input-group">
+                    <input 
+                        type="text" 
+                        id="centralQuestionInput" 
+                        class="central-question-input" 
+                        placeholder='e.g., "Who are my AI contacts?"'
+                        onkeypress="handleCentralQuestionKeyPress(event)"
+                    >
+                    <button class="btn btn-ask-compact" id="centralAskBtn" onclick="askCentralQuestion()">
+                        Ask
+                    </button>
+                </div>
+                <div class="central-qa-history" id="centralQAHistory" style="display: none;">
+                    <!-- Q&A history will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Add New Person Button -->
+        <div class="action-section">
+            <button id="addPersonBtn" class="btn btn-primary">+ Add Person</button>
+        </div>
+
+        <!-- People Grid -->
+        <div id="peopleGrid" class="people-grid">
+            <!-- People cards will be inserted here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">👥</div>
+            <h3>No contacts yet</h3>
+            <p>Add your first person to get started managing your relationships.</p>
+            <button onclick="document.getElementById('addPersonBtn').click()" class="btn btn-primary" style="margin-top: 1rem;">
+                Add Your First Contact
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Confirm Action</h2>
+                <span class="close" id="confirmClose">&times;</span>
+            </div>
+            <div class="confirm-body">
+                <p id="confirmMessage">Are you sure?</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="confirmCancel">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmOk">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Add/Edit Person -->
+    <div id="personModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Person</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="personForm">
+                <input type="hidden" id="personId">
+                
+                <div class="form-group">
+                    <label for="personName">Name *</label>
+                    <input type="text" id="personName" placeholder="Enter name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="personDetails">Details</label>
+                    <textarea id="personDetails" rows="6" placeholder="Add notes or details..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
