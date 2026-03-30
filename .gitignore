@@ -37,6 +37,7 @@ instance/
 # Data files (user data - don't commit)
 data.json
 users.json
+notes.json
 
 # Backup files
 app_old.py

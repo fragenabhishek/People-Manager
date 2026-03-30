@@ -1,197 +1,113 @@
 # People Manager
 
-A professional, AI-powered contact management system with a modern service website interface built with Python Flask.
+An AI-powered personal relationship management system. Track contacts, nurture relationships, and never miss a follow-up.
 
-🌐 **Live Demo**: [https://people-manager-kebr.onrender.com/](https://people-manager-kebr.onrender.com/)
-
-## ✨ What's New - Modern Landing Page!
-
-**🎨 Professional Service Website** - We've transformed People Manager with a beautiful landing page that:
-- **Welcomes visitors** with a professional hero section and animated visuals
-- **Explains features** through an engaging 8-card showcase
-- **Guides users** with a step-by-step "How It Works" section
-- **Shows use cases** for sales, networking, recruiting, and more
-- **Enhances auth pages** with modern gradient designs and animations
-- **Adapts responsively** across all devices (desktop, tablet, mobile)
-
-**🎯 Smart Routing** - Intelligent navigation based on authentication:
-- New visitors see the landing page explaining the service
-- Logged-in users go straight to their dashboard
-- Seamless experience with automatic detection
-
-📄 **[View Full Enhancement Details](ENHANCEMENT_SUMMARY.md)**
+**Live Demo**: [https://people-manager-kebr.onrender.com/](https://people-manager-kebr.onrender.com/)
 
 ## Features
 
-- ✨ **Add People**: Store name and details/summary for each person
-- 🔍 **Search**: Search people by name in real-time
-- 👁️ **View Details**: Click on any person's name to view their details
-- ✏️ **Update**: Edit person's information with timestamped updates
-- 🗑️ **Delete**: Remove people from the database
-- 🧠 **AI Person Blueprint**: Generate comprehensive personality profiles including:
-  - Key contact information
-  - Who they are and their background
-  - Personality traits and communication style
-  - How to approach and interact with them
-  - Relationship timeline and important moments
-  - Quick insights and key takeaways
-- 💬 **Central AI Q&A**: Ask questions about any person from one powerful interface:
-  - "Who did I meet this week?"
-  - "Who should I follow up with?"
-  - "Who are my AI/ML contacts?"
-  - "When did I meet Sarah?"
-  - Searches across all your contacts intelligently
-- 💾 **Cloud Storage**: Data stored in MongoDB Atlas (cloud database) or JSON file (local)
-- 🔐 **Password Protected**: Secure login system
-- 🎨 **Modern UI**: Clean, minimalist design with smooth animations
+**Contact Management**
+- Structured contact fields: name, email, phone, company, job title, location, social links, birthday
+- Full-text search across all fields
+- Tags and labels for organization
+- Filter contacts by tag
 
-## Quick Start (Local Development)
+**Interaction Timeline**
+- Add typed notes: meetings, calls, emails, events, follow-ups
+- Chronological timeline per contact
+- Activity feed across all contacts
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/fragenabhishek/People-Manager.git
-   cd People-Manager
-   ```
+**Relationship Intelligence**
+- Auto-calculated relationship score based on interaction recency and frequency
+- Visual status indicators: warm, lukewarm, cold
+- Dashboard showing relationship health distribution
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+**Follow-up Reminders**
+- Set follow-up dates on any contact
+- Optional recurring frequency
+- Mark complete with auto-reschedule
+- Dashboard widget for due/overdue follow-ups
 
-3. **Run the app**:
-   ```bash
-   python app.py
-   ```
+**AI Features** (powered by Google Gemini)
+- Person Blueprint: comprehensive personality profile from notes
+- Central Q&A: ask questions across all contacts
+- AI tag suggestions based on contact details
 
-4. **Open your browser**:
-   ```
-   http://localhost:5000
-   ```
+**Import/Export**
+- CSV import with intelligent column mapping
+- CSV and JSON export
 
-The app will use JSON file storage locally. To use MongoDB, set the `MONGO_URI` environment variable.
+**Dashboard & Analytics**
+- Total contacts, weekly additions, follow-ups due, cold contacts
+- Relationship health chart
+- Tag breakdown with counts
+- Recently added contacts
 
-## Usage
+**Modern UI**
+- Three-panel layout with sidebar, grid, and detail drawer
+- Dark mode with persistence
+- Keyboard shortcuts (N = new, / = search, Esc = close)
+- Fully responsive (desktop, tablet, mobile)
+- Toast notification system
 
-### Adding a Person
-1. Click "Add New Person"
-2. Enter name (required) and details/summary (optional)
-3. Click "Save Person"
+## Quick Start
 
-### Viewing Details
-- Click on any person's name to expand and view their details
+```bash
+git clone https://github.com/fragenabhishek/People-Manager.git
+cd People-Manager
+pip install -r requirements.txt
+python app.py
+```
 
-### Searching
-- Type in the search bar to find people by name
-- Results update in real-time
+Open `http://localhost:5000`. The app uses JSON file storage by default.
 
-### Editing
-1. Click "Edit" on any person card
-2. Modify the information
-3. Click "Save Person"
+## Environment Variables
 
-### Deleting
-1. Click "Delete" on any person card
-2. Confirm deletion
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONGO_URI` | For cloud DB | MongoDB Atlas connection string |
+| `GEMINI_API_KEY` | For AI features | Google Gemini API key |
+| `SECRET_KEY` | Recommended | Flask session secret key |
+| `FLASK_DEBUG` | No | Enable debug mode (True/False) |
 
 ## Project Structure
 
 ```
-people-manager/
-├── app.py              # Application entry point (clean, minimal)
-├── config/             # Configuration management
-├── models/             # Domain entities (Person, User)
-├── repositories/       # Data access layer (Repository pattern)
-├── services/           # Business logic layer
-├── routes/             # API endpoints (separated by domain)
-├── middleware/         # Cross-cutting concerns (auth)
-├── utils/              # Validation, logging, responses
-├── templates/          # HTML templates
-├── static/             # CSS, JS, images
-├── requirements.txt    # Python dependencies
-└── data.json           # Local JSON storage (fallback)
+People-Manager/
+├── app.py                    # Application factory
+├── config/                   # Configuration
+├── models/                   # Person, Note, User entities
+├── repositories/             # Data access (MongoDB/JSON)
+├── services/                 # Business logic
+├── routes/                   # API endpoints
+├── middleware/                # Auth, rate limiting
+├── utils/                    # Validation, logging, responses
+├── templates/                # HTML templates
+├── static/                   # CSS, JS
+├── docs/                     # Requirements + System Design
+└── requirements.txt
 ```
 
-**Architecture Highlights:**
-- ✅ **SOLID Principles**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
-- ✅ **Clean Architecture**: Clear separation of concerns with layered design
-- ✅ **Repository Pattern**: Abstracted data access with interchangeable storage backends
-- ✅ **Service Layer**: Business logic separated from HTTP handling
-- ✅ **Dependency Injection**: Loose coupling, easy testing
-- ✅ **Type Safety**: Type hints throughout for better IDE support and error catching
+## Architecture
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
+- SOLID principles throughout
+- Clean layered architecture (Models → Repos → Services → Routes)
+- Repository pattern with dual storage (MongoDB/JSON)
+- Dependency injection (wired in app factory)
+- Rate limiting, session security, XSS prevention
+- Structured logging and standardized API responses
 
-## API Endpoints
+See [ARCHITECTURE.md](ARCHITECTURE.md) | [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
 
-### Authentication
-- `GET /login` - Login page
-- `POST /login` - Authenticate user
-- `GET /logout` - Logout user
-
-### People Management
-- `GET /` - Main UI (requires authentication)
-- `GET /api/people` - Get all people
-- `GET /api/people/<id>` - Get specific person
-- `GET /api/people/search/<query>` - Search by name
-- `POST /api/people` - Add new person
-- `PUT /api/people/<id>` - Update person
-- `DELETE /api/people/<id>` - Delete person
-
-### AI Features (requires GEMINI_API_KEY)
-- `POST /api/people/<id>/summary` - Generate comprehensive person blueprint
-- `POST /api/ask` - **Central Q&A** - Ask questions about any person or across all contacts
-
-## Technologies Used
+## Tech Stack
 
 - **Backend**: Python 3.11, Flask 3.0
-- **Database**: MongoDB Atlas (cloud) / JSON file (local)
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3
-- **Hosting**: Render.com (free tier)
-- **Server**: Gunicorn
-
-## Technical Highlights
-
-- **SOLID Principles** - Professional, maintainable code architecture
-- **Clean Architecture** - Clear separation: Models, Repositories, Services, Routes
-- **Repository Pattern** - Abstracted data access, swappable storage backends
-- **Type Safety** - Full type hints for better development experience
-- **Centralized Validation** - All input validation in one place
-- **Proper Logging** - Structured logging throughout application
-- **Standardized Responses** - Consistent API response format
-- **RESTful API** - Well-designed RESTful endpoints
-- **Dual Storage** - MongoDB Atlas (cloud) or JSON (local)
-- **Modern UI** - Minimalist, responsive design
-
-## Deployment
-
-The app is deployed on Render.com with MongoDB Atlas. It automatically detects the environment:
-
-- **With MONGO_URI**: Uses MongoDB cloud database
-- **Without MONGO_URI**: Uses local JSON file storage
-
-To deploy your own:
-1. Fork this repository
-2. Create a MongoDB Atlas cluster (free tier)
-3. Create a new web service on Render.com
-4. Connect your GitHub repo
-5. Add environment variable: `MONGO_URI` with your MongoDB connection string
-6. Deploy!
-
-## Environment Variables
-
-- `SECRET_KEY` (optional) - Flask secret key for sessions
-- `MONGO_URI` (optional) - MongoDB connection string
-- `GEMINI_API_KEY` (optional) - Google Gemini API key for AI features
-- `PORT` (auto-set by Render) - Server port
-- `FLASK_DEBUG` (optional) - Enable debug mode (True/False)
-
-## Documentation
-
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Detailed architecture and SOLID principles
-- **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** - Refactoring details and improvements
-- **[README.md](README.md)** - This file (overview and quickstart)
+- **Database**: MongoDB Atlas / JSON files
+- **AI**: Google Gemini API
+- **Frontend**: Vanilla JavaScript, CSS Custom Properties
+- **Security**: Flask-Bcrypt, Flask-Limiter, Bleach
+- **Hosting**: Render.com + Gunicorn
 
 ## License
 
-MIT License - Feel free to use and modify!
-
+MIT License

@@ -7,122 +7,259 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <div class="header-left">
-                    <div class="brand-header">
-                        <span class="brand-icon">👥</span>
-                        <h1>People Manager</h1>
+    <!-- Top Bar -->
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="topbar-left">
+                <span class="brand-icon">&#x1F465;</span>
+                <h1>People Manager</h1>
+            </div>
+            <div class="topbar-right">
+                <span class="username">{{ session.username }}</span>
+                <button class="btn btn-icon-only" id="darkModeToggle" title="Toggle dark mode">&#9789;</button>
+                <a href="{{ url_for('auth_routes.logout') }}" class="btn btn-sm btn-outline">Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <button class="sidebar-link active" data-view="contacts" onclick="switchView('contacts')">
+                    <span class="sidebar-icon">&#128101;</span> Contacts
+                </button>
+                <button class="sidebar-link" data-view="dashboard" onclick="switchView('dashboard')">
+                    <span class="sidebar-icon">&#128202;</span> Dashboard
+                </button>
+                <button class="sidebar-link" data-view="activity" onclick="switchView('activity')">
+                    <span class="sidebar-icon">&#128337;</span> Activity
+                </button>
+            </nav>
+            <div class="sidebar-section">
+                <h4 class="sidebar-heading">Tags</h4>
+                <div id="tagList" class="tag-list-sidebar">
+                    <!-- populated by JS -->
+                </div>
+            </div>
+            <div class="sidebar-section sidebar-bottom">
+                <button class="btn btn-sm btn-outline btn-block" onclick="showImportModal()">Import CSV</button>
+                <div class="export-links">
+                    <a href="/api/people/export/csv" class="btn btn-sm btn-link">Export CSV</a>
+                    <a href="/api/people/export/json" class="btn btn-sm btn-link">Export JSON</a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <section class="main-content">
+
+            <!-- ===== Contacts View ===== -->
+            <div id="view-contacts" class="view active-view">
+                <div class="view-header">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="Search contacts..." class="search-input" />
                     </div>
-                    <p class="subtitle">Welcome back, <strong>{{ session.username }}</strong> 👋</p>
+                    <div class="view-actions">
+                        <button class="btn btn-primary" id="addPersonBtn" onclick="openPersonModal()">+ Add Contact</button>
+                    </div>
                 </div>
-                <div class="header-actions">
-                    <a href="{{ url_for('auth_routes.logout') }}" class="btn btn-secondary btn-logout">Logout</a>
+
+                <!-- AI Q&A Bar -->
+                <div class="qa-bar" id="qaBar">
+                    <div class="qa-bar-toggle" onclick="toggleQA()">
+                        <span>&#128172; Ask AI about your contacts</span>
+                        <span class="qa-chevron" id="qaChevron">&#9660;</span>
+                    </div>
+                    <div class="qa-bar-body" id="qaBody" style="display:none;">
+                        <div class="qa-input-row">
+                            <input type="text" id="qaInput" placeholder='e.g. "Who should I follow up with?"' onkeypress="if(event.key==='Enter')askAI()" />
+                            <button class="btn btn-primary btn-sm" id="qaAskBtn" onclick="askAI()">Ask</button>
+                        </div>
+                        <div class="qa-history" id="qaHistory" style="display:none;"></div>
+                    </div>
+                </div>
+
+                <!-- Active Tag Filter -->
+                <div class="active-filter" id="activeFilter" style="display:none;">
+                    <span>Filtered by tag: <strong id="activeFilterTag"></strong></span>
+                    <button class="btn btn-sm btn-link" onclick="clearTagFilter()">Clear</button>
+                </div>
+
+                <!-- People List -->
+                <div id="peopleGrid" class="people-grid"></div>
+                <div id="emptyState" class="empty-state" style="display:none;">
+                    <div class="empty-icon">&#128101;</div>
+                    <h3>No contacts yet</h3>
+                    <p>Add your first contact or import a CSV to get started.</p>
+                    <button onclick="openPersonModal()" class="btn btn-primary" style="margin-top:1rem;">Add Your First Contact</button>
                 </div>
             </div>
-        </header>
 
-        <!-- Search Bar -->
-        <div class="search-section">
-            <input type="text" id="searchInput" placeholder="Search by name..." class="search-input">
-        </div>
-
-        <!-- Central AI Q&A Section - Minimalist & Collapsible -->
-        <div class="central-qa-compact" id="centralQACompact">
-            <div class="qa-toggle-bar" onclick="toggleCentralQA()">
-                <span class="qa-toggle-text">💬 Ask AI about contacts</span>
-                <span class="qa-toggle-icon" id="qaToggleIcon">▼</span>
-            </div>
-            <div class="central-qa-content" id="centralQAContent" style="display: none;">
-                <div class="central-qa-input-group">
-                    <input 
-                        type="text" 
-                        id="centralQuestionInput" 
-                        class="central-question-input" 
-                        placeholder='e.g., "Who are my AI contacts?"'
-                        onkeypress="handleCentralQuestionKeyPress(event)"
-                    >
-                    <button class="btn btn-ask-compact" id="centralAskBtn" onclick="askCentralQuestion()">
-                        Ask
-                    </button>
+            <!-- ===== Dashboard View ===== -->
+            <div id="view-dashboard" class="view">
+                <h2 class="view-title">Dashboard</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Total Contacts</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statWeek">-</div><div class="stat-label">Added This Week</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statFollowups">-</div><div class="stat-label">Follow-ups Due</div></div>
+                    <div class="stat-card stat-warn"><div class="stat-value" id="statCold">-</div><div class="stat-label">Going Cold</div></div>
                 </div>
-                <div class="central-qa-history" id="centralQAHistory" style="display: none;">
-                    <!-- Q&A history will appear here -->
+                <div class="dashboard-grid">
+                    <div class="dash-card">
+                        <h3>Relationship Health</h3>
+                        <div id="healthChart" class="health-bars"></div>
+                    </div>
+                    <div class="dash-card">
+                        <h3>Follow-ups Due</h3>
+                        <div id="followupList" class="mini-list"></div>
+                    </div>
+                    <div class="dash-card">
+                        <h3>Recently Added</h3>
+                        <div id="recentList" class="mini-list"></div>
+                    </div>
+                    <div class="dash-card">
+                        <h3>Tags Breakdown</h3>
+                        <div id="tagBreakdown" class="tag-breakdown"></div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Add New Person Button -->
-        <div class="action-section">
-            <button id="addPersonBtn" class="btn btn-primary">+ Add Person</button>
-        </div>
-
-        <!-- People Grid -->
-        <div id="peopleGrid" class="people-grid">
-            <!-- People cards will be inserted here -->
-        </div>
-
-        <!-- Empty State -->
-        <div id="emptyState" class="empty-state" style="display: none;">
-            <div class="empty-icon">👥</div>
-            <h3>No contacts yet</h3>
-            <p>Add your first person to get started managing your relationships.</p>
-            <button onclick="document.getElementById('addPersonBtn').click()" class="btn btn-primary" style="margin-top: 1rem;">
-                Add Your First Contact
-            </button>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content confirm-modal">
-            <div class="modal-header">
-                <h2 id="confirmTitle">Confirm Action</h2>
-                <span class="close" id="confirmClose">&times;</span>
+            <!-- ===== Activity View ===== -->
+            <div id="view-activity" class="view">
+                <h2 class="view-title">Recent Activity</h2>
+                <div id="activityFeed" class="activity-feed"></div>
             </div>
-            <div class="confirm-body">
-                <p id="confirmMessage">Are you sure?</p>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" id="confirmCancel">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmOk">Delete</button>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
-    <!-- Modal for Add/Edit Person -->
+    <!-- Person Modal (Add/Edit) -->
     <div id="personModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2 id="modalTitle">Add New Person</h2>
-                <span class="close">&times;</span>
+                <h2 id="modalTitle">Add New Contact</h2>
+                <span class="close" onclick="closePersonModal()">&times;</span>
             </div>
-            <form id="personForm">
-                <input type="hidden" id="personId">
-                
-                <div class="form-group">
-                    <label for="personName">Name *</label>
-                    <input type="text" id="personName" placeholder="Enter name" required>
+            <form id="personForm" onsubmit="handlePersonSubmit(event)">
+                <input type="hidden" id="personId" />
+                <div class="form-grid">
+                    <div class="form-group"><label for="personName">Name *</label><input type="text" id="personName" required /></div>
+                    <div class="form-group"><label for="personEmail">Email</label><input type="email" id="personEmail" /></div>
+                    <div class="form-group"><label for="personPhone">Phone</label><input type="tel" id="personPhone" /></div>
+                    <div class="form-group"><label for="personCompany">Company</label><input type="text" id="personCompany" /></div>
+                    <div class="form-group"><label for="personJobTitle">Job Title</label><input type="text" id="personJobTitle" /></div>
+                    <div class="form-group"><label for="personLocation">Location</label><input type="text" id="personLocation" /></div>
+                    <div class="form-group"><label for="personLinkedin">LinkedIn URL</label><input type="url" id="personLinkedin" /></div>
+                    <div class="form-group"><label for="personTwitter">Twitter</label><input type="text" id="personTwitter" /></div>
+                    <div class="form-group"><label for="personWebsite">Website</label><input type="url" id="personWebsite" /></div>
+                    <div class="form-group"><label for="personHowMet">How We Met</label><input type="text" id="personHowMet" /></div>
+                    <div class="form-group"><label for="personMetAt">Date Met</label><input type="date" id="personMetAt" /></div>
+                    <div class="form-group"><label for="personBirthday">Birthday</label><input type="date" id="personBirthday" /></div>
+                    <div class="form-group form-group-full"><label for="personTags">Tags <small>(comma separated)</small></label><input type="text" id="personTags" placeholder="e.g. investor, AI/ML, conference" /></div>
+                    <div class="form-group form-group-full"><label for="personDetails">Notes / Details</label><textarea id="personDetails" rows="4"></textarea></div>
+                    <div class="form-group"><label for="personFollowUp">Next Follow-up</label><input type="date" id="personFollowUp" /></div>
+                    <div class="form-group"><label for="personFollowFreq">Follow-up Every (days)</label><input type="number" id="personFollowFreq" min="0" value="0" /></div>
                 </div>
-
-                <div class="form-group">
-                    <label for="personDetails">Details</label>
-                    <textarea id="personDetails" rows="6" placeholder="Add notes or details..."></textarea>
-                </div>
-
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="saveBtn">Save</button>
+                    <button type="button" class="btn btn-outline" onclick="closePersonModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Contact</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Note Modal -->
+    <div id="noteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Interaction Note</h2>
+                <span class="close" onclick="closeNoteModal()">&times;</span>
+            </div>
+            <form id="noteForm" onsubmit="handleNoteSubmit(event)">
+                <input type="hidden" id="notePersonId" />
+                <div class="form-group">
+                    <label for="noteType">Type</label>
+                    <select id="noteType" class="form-select">
+                        <option value="general">General</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="call">Call</option>
+                        <option value="email">Email</option>
+                        <option value="event">Event</option>
+                        <option value="follow_up">Follow-up</option>
+                    </select>
+                </div>
+                <div class="form-group"><label for="noteContent">Note *</label><textarea id="noteContent" rows="4" required></textarea></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeNoteModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Note</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Person Detail Drawer -->
+    <div id="personDrawer" class="drawer">
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <button class="btn btn-icon-only" onclick="closeDrawer()">&larr;</button>
+                <h2 id="drawerName"></h2>
+                <div class="drawer-actions">
+                    <button class="btn btn-sm btn-outline" onclick="editCurrentPerson()">Edit</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCurrentPerson()">Delete</button>
+                </div>
+            </div>
+            <div id="drawerBody" class="drawer-body"></div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Contacts</h2>
+                <span class="close" onclick="closeImportModal()">&times;</span>
+            </div>
+            <div class="modal-body-padded">
+                <p>Upload a CSV file with columns: name, email, phone, company, job_title, location, tags, details, how_we_met</p>
+                <form id="importForm" onsubmit="handleImport(event)">
+                    <div class="form-group"><input type="file" id="importFile" accept=".csv" required /></div>
+                    <div class="form-actions"><button type="submit" class="btn btn-primary">Import</button></div>
+                </form>
+                <div id="importResult" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header"><h2 id="confirmTitle">Confirm</h2><span class="close" onclick="closeConfirm()">&times;</span></div>
+            <div class="modal-body-padded"><p id="confirmMessage"></p></div>
+            <div class="form-actions" style="padding:0 1.5rem 1.5rem;">
+                <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+                <button class="btn btn-danger" id="confirmOkBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav" id="mobileNav">
+        <button class="mobile-nav-btn active" data-view="contacts" onclick="switchView('contacts')">
+            <span>&#128101;</span><span>Contacts</span>
+        </button>
+        <button class="mobile-nav-btn" data-view="dashboard" onclick="switchView('dashboard')">
+            <span>&#128202;</span><span>Dashboard</span>
+        </button>
+        <button class="mobile-nav-btn" data-view="activity" onclick="switchView('activity')">
+            <span>&#128337;</span><span>Activity</span>
+        </button>
+        <button class="mobile-nav-btn" onclick="showImportModal()">
+            <span>&#128228;</span><span>Import</span>
+        </button>
+    </nav>
+
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
-

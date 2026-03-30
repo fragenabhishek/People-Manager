@@ -1,140 +1,137 @@
 """
 People Manager Application
-Refactored with SOLID principles and clean architecture
+AI-powered relationship management with clean architecture
 
 Architecture:
-- Config: Centralized configuration management
-- Models: Domain entities (Person, User)
-- Repositories: Data access layer with abstraction
-- Services: Business logic layer
+- Config: Centralized configuration
+- Models: Domain entities (Person, User, Note)
+- Repositories: Data access layer (MongoDB/JSON)
+- Services: Business logic (Person, Auth, AI, Notes, Import/Export)
 - Routes: API endpoints (separated by domain)
-- Middleware: Cross-cutting concerns (auth)
+- Middleware: Auth, rate limiting
 - Utils: Validation, logging, response formatting
 """
-from flask import Flask, render_template
+from flask import Flask, render_template, session
 from flask_bcrypt import Bcrypt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
 
 from config import Config
 from utils.logger import setup_logger
 from middleware import login_required
 
-# Import repositories
 from repositories.person_repository import PersonRepository
 from repositories.user_repository import UserRepository
+from repositories.note_repository import NoteRepository
 
-# Import services
 from services.auth_service import AuthService
 from services.person_service import PersonService
 from services.ai_service import AIService
+from services.note_service import NoteService
+from services.import_export_service import ImportExportService
 
-# Import routes
-from routes import auth_bp, person_bp, ai_bp
+from routes import auth_bp, person_bp, ai_bp, note_bp
 from routes.auth_routes import init_auth_routes
 from routes.person_routes import init_person_routes
 from routes.ai_routes import init_ai_routes
+from routes.note_routes import init_note_routes
 
-# Initialize logger
 logger = setup_logger('people_manager')
 
 
 def create_app() -> Flask:
-    """
-    Application factory pattern
-    Creates and configures the Flask application
-    
-    Returns:
-        Configured Flask application instance
-    """
-    # Create Flask app
+    """Application factory - creates and configures the Flask app"""
     app = Flask(__name__)
+
+    # Core config
     app.secret_key = Config.SECRET_KEY
-    
-    # Initialize Bcrypt
+    app.config['SESSION_COOKIE_HTTPONLY'] = Config.SESSION_COOKIE_HTTPONLY
+    app.config['SESSION_COOKIE_SAMESITE'] = Config.SESSION_COOKIE_SAMESITE
+
+    # Bcrypt
     bcrypt = Bcrypt(app)
-    
-    # Validate configuration
+
+    # Rate limiter
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=[Config.RATE_LIMIT_DEFAULT],
+        storage_uri="memory://",
+    )
+    limiter.limit(Config.RATE_LIMIT_LOGIN)(auth_bp)
+    limiter.limit(Config.RATE_LIMIT_API)(person_bp)
+    limiter.limit(Config.RATE_LIMIT_API)(note_bp)
+    limiter.limit(Config.RATE_LIMIT_AI)(ai_bp)
+
     Config.validate()
-    
-    # Initialize database connections and repositories
-    people_repo, user_repo = initialize_repositories()
-    
-    # Initialize services (Dependency Injection)
+
+    # Repositories
+    people_repo, user_repo, note_repo = initialize_repositories()
+
+    # Services (Dependency Injection)
     auth_service = AuthService(user_repo, bcrypt)
-    person_service = PersonService(people_repo)
+    person_service = PersonService(people_repo, note_repo)
     ai_service = AIService()
-    
-    # Initialize routes with their dependencies
+    note_service = NoteService(note_repo, people_repo)
+    ie_service = ImportExportService(people_repo)
+
+    # Wire routes
     init_auth_routes(auth_service)
-    init_person_routes(person_service)
-    init_ai_routes(ai_service, person_service)
-    
+    init_person_routes(person_service, ie_service)
+    init_ai_routes(ai_service, person_service, note_service)
+    init_note_routes(note_service)
+
     # Register blueprints
     app.register_blueprint(auth_bp)
     app.register_blueprint(person_bp)
     app.register_blueprint(ai_bp)
-    
-    # Register main routes
+    app.register_blueprint(note_bp)
+
     register_main_routes(app)
-    
+
+    # Health check
+    @app.route('/health')
+    def health():
+        return {'status': 'ok', 'storage': 'mongodb' if Config.USE_MONGODB else 'json', 'ai': Config.AI_ENABLED}
+
     logger.info("Application initialized successfully")
-    
     return app
 
 
 def initialize_repositories():
-    """
-    Initialize repositories based on configuration
-    Implements Dependency Inversion: depends on abstractions
-    
-    Returns:
-        Tuple of (PersonRepository, UserRepository)
-    """
+    """Initialize repositories based on configuration"""
     if Config.USE_MONGODB:
-        # MongoDB setup
         client = MongoClient(Config.MONGO_URI)
         db = client[Config.DB_NAME]
-        people_collection = db[Config.PEOPLE_COLLECTION]
-        users_collection = db[Config.USERS_COLLECTION]
-        
-        people_repo = PersonRepository(people_collection=people_collection)
-        user_repo = UserRepository(users_collection=users_collection)
+        people_repo = PersonRepository(people_collection=db[Config.PEOPLE_COLLECTION])
+        user_repo = UserRepository(users_collection=db[Config.USERS_COLLECTION])
+        note_repo = NoteRepository(notes_collection=db[Config.NOTES_COLLECTION])
     else:
-        # JSON file setup
         people_repo = PersonRepository(data_file=Config.DATA_FILE)
         user_repo = UserRepository(data_file=Config.USERS_FILE)
-    
-    return people_repo, user_repo
+        note_repo = NoteRepository(data_file=Config.NOTES_FILE)
+    return people_repo, user_repo, note_repo
 
 
 def register_main_routes(app: Flask):
     """Register main application routes"""
-    
+
     @app.route('/')
     def index():
-        """Landing page or redirect to dashboard if logged in"""
-        from flask import session
         if session.get('logged_in'):
             return render_template('dashboard.html', session=session)
         return render_template('landing.html')
-    
+
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        """Dashboard for authenticated users"""
-        from flask import session
         return render_template('dashboard.html', session=session)
 
 
-# Create application instance
 app = create_app()
 
 
 if __name__ == '__main__':
-    """Run the application"""
     logger.info(f"Starting server on {Config.HOST}:{Config.PORT}")
-    app.run(
-        host=Config.HOST,
-        port=Config.PORT,
-        debug=Config.DEBUG
-    )
+    app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
