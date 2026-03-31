@@ -38,6 +38,7 @@ instance/
 data.json
 users.json
 notes.json
+*.db
 
 # Backup files
 app_old.py

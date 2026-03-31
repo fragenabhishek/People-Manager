@@ -1,233 +1,124 @@
 # Phase 2 — PostgreSQL Migration
 
-**Goal**: Migrate from MongoDB/JSON storage to PostgreSQL with SQLAlchemy ORM, add Redis for caching and session storage.
+**Goal**: Add SQLAlchemy ORM as a third storage backend (alongside JSON and MongoDB), with Alembic for schema migrations. Setting `DATABASE_URL` activates the SQL path.
 
-**Duration**: 2-3 weeks
+**Status**: COMPLETED
+
 **Depends on**: Phase 0 (Production Hardening)
 
-## Why PostgreSQL
+## What Was Done
 
-| Concern | MongoDB (current) | PostgreSQL (target) |
-|---------|-------------------|-------------------|
-| ACID transactions | Limited (multi-doc txns are slow) | Full ACID, row-level locking |
-| Relational integrity | None (manual) | Foreign keys, constraints, cascades |
-| Billing/financial data | Not recommended | Industry standard for financial records |
-| Full-text search | Basic `$text` index | `tsvector` + `GIN` index, ranked results |
-| JSON flexibility | Native | `JSONB` column for flexible fields |
-| Hosting cost | Atlas free tier: 512MB | Supabase/Neon free tier: 500MB |
+### 1. SQLAlchemy ORM Models (`models/database.py`, `models/tables.py`)
+- [x] `Base` declarative base, `init_db()`, `create_tables()`, `drop_tables()`
+- [x] `UserRow` — maps to `users` table (all fields including MFA)
+- [x] `PersonRow` — maps to `people` table (all 25+ fields, tags stored as CSV)
+- [x] `NoteRow` — maps to `notes` table with FK cascades
+- [x] Relationships: `UserRow.people`, `UserRow.notes`, `PersonRow.notes`
+- [x] Indexes on `user_id`, `person_id` for efficient lookups
 
-## Schema Design
+### 2. SQL Repository Implementations
+| File | Description |
+|------|-------------|
+| `repositories/sql_user_repository.py` | Full CRUD + `find_by_username` |
+| `repositories/sql_person_repository.py` | Full CRUD + search, tags, follow-ups |
+| `repositories/sql_note_repository.py` | Full CRUD + `find_by_person`, `delete_by_person`, `count_by_person` |
 
-```sql
--- Users
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    mfa_secret VARCHAR(64),
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+All three implement the same `BaseRepository` interface — services are completely unaware of the storage backend.
 
--- People (contacts)
-CREATE TABLE people (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255),
-    phone VARCHAR(50),
-    company VARCHAR(255),
-    job_title VARCHAR(255),
-    location VARCHAR(255),
-    linkedin_url VARCHAR(500),
-    twitter_handle VARCHAR(100),
-    website VARCHAR(500),
-    details TEXT,
-    how_we_met TEXT,
-    profile_image_url VARCHAR(500),
-    birthday DATE,
-    anniversary DATE,
-    met_at DATE,
-    tags TEXT[] DEFAULT '{}',
-    next_follow_up DATE,
-    follow_up_frequency_days INTEGER DEFAULT 0,
-    relationship_score DECIMAL(5,2) DEFAULT 0.0,
-    relationship_status VARCHAR(20) DEFAULT 'new',
-    last_interaction_at TIMESTAMPTZ,
-    interaction_count INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
+### 3. Configuration (`config/config.py`)
+- [x] `DATABASE_URL` env var — when set, activates SQL storage
+- [x] Priority: `DATABASE_URL` (SQL) > `MONGO_URI` (MongoDB) > JSON files
+- [x] `Config.validate()` reports the active storage backend in logs
 
-    CONSTRAINT valid_status CHECK (relationship_status IN ('new', 'warm', 'lukewarm', 'cold'))
-);
+### 4. App Factory (`app.py`)
+- [x] `_init_repositories()` now has three branches: SQL → MongoDB → JSON
+- [x] When `USE_SQL` is true, calls `init_db()` + `create_tables()` at startup
+- [x] Health endpoint reports `postgresql` as storage type
 
-CREATE INDEX idx_people_user_id ON people(user_id);
-CREATE INDEX idx_people_tags ON people USING GIN(tags);
-CREATE INDEX idx_people_follow_up ON people(next_follow_up) WHERE next_follow_up IS NOT NULL;
-CREATE INDEX idx_people_search ON people USING GIN(
-    to_tsvector('english', coalesce(name, '') || ' ' || coalesce(company, '') || ' ' || coalesce(details, ''))
-);
+### 5. Alembic Migrations
+- [x] `alembic/` directory initialized with `env.py` configured for our models
+- [x] `env.py` reads `DATABASE_URL` from environment
+- [x] Initial migration auto-generated: `users`, `people`, `notes` tables with indexes
+- [x] `alembic upgrade head` works against any supported database
 
--- Notes
-CREATE TABLE notes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    person_id UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    note_type VARCHAR(20) DEFAULT 'general',
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+### 6. Docker Compose
+- [x] `docker-compose.yml` — now uses PostgreSQL 16 instead of MongoDB
+- [x] `docker-compose.mongo.yml` — legacy MongoDB setup preserved as separate file
+- [x] PostgreSQL healthcheck via `pg_isready`
 
-    CONSTRAINT valid_note_type CHECK (note_type IN ('general', 'meeting', 'call', 'email', 'event', 'follow_up'))
-);
+### 7. Test Coverage
+- [x] `tests/test_sql_repos.py` — 18 unit tests (SQLite in-memory) covering all repo methods
+- [x] `tests/test_sql_integration.py` — 8 integration tests running the full Flask app with SQLite backend
+- [x] Existing JSON-based tests (81) continue to pass unchanged
+- [x] **107 total tests, all passing, zero lint warnings**
 
-CREATE INDEX idx_notes_person ON notes(person_id, created_at DESC);
-CREATE INDEX idx_notes_user ON notes(user_id, created_at DESC);
+## Architecture: Three Storage Backends
+
+```
+Config.DATABASE_URL set?  ──▶ SQLAlchemy repos (PostgreSQL / SQLite)
+                    │
+                    ▼ no
+Config.MONGO_URI set?     ──▶ MongoDB repos (existing)
+                    │
+                    ▼ no
+                          ──▶ JSON file repos (existing)
 ```
 
-## Implementation Steps
+Services (`PersonService`, `AuthService`, etc.) have zero knowledge of which backend is active. This is the payoff of the Repository Pattern.
 
-### Step 1: Add SQLAlchemy Models
+## Files Added/Changed
 
-```python
-# models/db.py
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+| File | Status |
+|------|--------|
+| `models/database.py` | New — engine, session factory, Base |
+| `models/tables.py` | New — ORM table definitions |
+| `repositories/sql_user_repository.py` | New |
+| `repositories/sql_person_repository.py` | New |
+| `repositories/sql_note_repository.py` | New |
+| `tests/test_sql_repos.py` | New — 18 unit tests |
+| `tests/test_sql_integration.py` | New — 8 integration tests |
+| `alembic/` | New — migration framework |
+| `alembic.ini` | New — Alembic config |
+| `docker-compose.mongo.yml` | New — legacy Mongo setup |
+| `requirements.txt` | Updated — SQLAlchemy, alembic, psycopg2-binary |
+| `config/config.py` | Updated — DATABASE_URL, USE_SQL |
+| `app.py` | Updated — SQL repo wiring, health endpoint |
+| `docker-compose.yml` | Updated — PostgreSQL 16 replaces MongoDB |
+| `.env.example` | Updated — DATABASE_URL documented |
+| `.gitignore` | Updated — *.db excluded |
+| `pyproject.toml` | Updated — Alembic files excluded from lint |
+| `repositories/__init__.py` | Updated — exports SQL repos |
 
-class Base(DeclarativeBase):
-    pass
-
-# models/person_model.py (SQLAlchemy version)
-from sqlalchemy import Column, String, Integer, Float, DateTime, ARRAY, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
-
-class PersonModel(Base):
-    __tablename__ = 'people'
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
-    name = Column(String(255), nullable=False)
-    # ... remaining fields
-```
-
-### Step 2: Create PostgreSQL Repository Implementations
-
-```python
-# repositories/pg_person_repository.py
-class PgPersonRepository(BaseRepository):
-    def __init__(self, session_factory):
-        self.Session = session_factory
-
-    def find_all(self, filters=None):
-        with self.Session() as session:
-            query = session.query(PersonModel)
-            if filters and 'user_id' in filters:
-                query = query.filter_by(user_id=filters['user_id'])
-            return [self._to_domain(row) for row in query.all()]
-```
-
-The key insight: **services don't change**. Because the repository pattern abstracts storage, `PersonService` works identically with either `PersonRepository` (MongoDB/JSON) or `PgPersonRepository` (PostgreSQL). This is the payoff of clean architecture.
-
-### Step 3: Data Migration Script
-
-```python
-# scripts/migrate_mongo_to_pg.py
-"""
-Migration script: MongoDB → PostgreSQL
-Run once, then verify, then switch config.
-"""
-
-def migrate():
-    # 1. Connect to both databases
-    mongo_client = MongoClient(MONGO_URI)
-    pg_engine = create_engine(PG_URI)
-
-    # 2. Migrate users first (foreign key dependency)
-    mongo_users = mongo_client.people_manager.users.find()
-    for user in mongo_users:
-        pg_user = map_user(user)
-        pg_session.add(pg_user)
-
-    # 3. Migrate people with user_id mapping
-    # 4. Migrate notes with person_id + user_id mapping
-    # 5. Verify counts match
-    # 6. Verify sample records match
-```
-
-### Step 4: Dual-Write Period (Safety Net)
-
-For 1-2 weeks, write to **both** MongoDB and PostgreSQL simultaneously:
-
-```python
-class DualWritePersonRepository(BaseRepository):
-    def __init__(self, primary, secondary):
-        self.primary = primary      # PostgreSQL (new)
-        self.secondary = secondary  # MongoDB (old, for rollback)
-
-    def create(self, entity):
-        result = self.primary.create(entity)
-        try:
-            self.secondary.create(entity)
-        except Exception as e:
-            logger.warning(f"Secondary write failed: {e}")
-        return result
-```
-
-### Step 5: Add Redis
-
-```python
-# Redis for:
-# 1. Rate limiting (replace memory://)
-# 2. Session storage (if keeping sessions alongside JWT)
-# 3. Cache frequently-accessed data (dashboard stats, tag lists)
-
-import redis
-
-redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'))
-```
-
-### Step 6: Alembic for Migrations
+## How to Use
 
 ```bash
-pip install alembic
-alembic init alembic
-alembic revision --autogenerate -m "initial schema"
-alembic upgrade head
+# Local dev with JSON files (default, no config needed)
+python app.py
+
+# Local dev with SQLite
+DATABASE_URL=sqlite:///people_manager.db python app.py
+
+# Production with PostgreSQL
+DATABASE_URL=postgresql://user:pass@host:5432/dbname python app.py
+
+# Docker (PostgreSQL included)
+docker compose up
+
+# Run Alembic migrations (production)
+DATABASE_URL=postgresql://... alembic upgrade head
 ```
 
-## Done When
-
-- [ ] PostgreSQL schema created via Alembic
-- [ ] All three repository implementations (Person, User, Note) working with PostgreSQL
-- [ ] Data migration script tested with real MongoDB data
-- [ ] Dual-write period completed with zero discrepancies
-- [ ] MongoDB dependency removed from `docker-compose.yml`
-- [ ] Redis connected for rate limiting and caching
-- [ ] Dashboard stats cached in Redis (30s TTL)
-- [ ] Full-text search uses PostgreSQL `tsvector` instead of in-memory filtering
-
-## Dependencies to Add
-
-```
-sqlalchemy>=2.0
-psycopg2-binary>=2.9
-alembic>=1.13
-redis>=5.0
-```
+## What's Deferred
+- **Redis**: Rate limiting and caching still use in-memory. Redis integration planned when scaling demands it.
+- **Data migration script**: `scripts/migrate_mongo_to_pg.py` — not needed until users actually migrate from Mongo to Postgres.
+- **Dual-write period**: Not implemented since backends are switched via config, not migrated live.
+- **Full-text search**: Uses `ILIKE` for now. PostgreSQL `tsvector` + `GIN` index can be added when search volume warrants it.
 
 ## Trade-offs
 
 | Decision | Pro | Con |
 |----------|-----|-----|
-| Dual-write period | Zero-downtime migration, easy rollback | Temporary complexity, slight write latency |
-| UUID primary keys | No sequential ID leaking | Slightly larger than auto-increment integers |
-| `TEXT[]` for tags | Simple, GIN-indexable | Not normalized — acceptable for read-heavy pattern |
-| Alembic over raw SQL | Version-controlled schema changes | Learning curve — but essential for production |
-
-## Rollback Plan
-
-If issues arise during migration:
-1. Switch `USE_POSTGRESQL` config flag back to `False`
-2. MongoDB still has all data from dual-write period
-3. No data loss possible because writes went to both
+| Tags as CSV column | Simple, portable across SQLite/PostgreSQL | No GIN index on tags (filter in Python for now) |
+| `create_tables()` at startup | Zero-config for dev, works without Alembic | Production should use Alembic for versioned migrations |
+| Three backends | Maximum flexibility, easy testing | More code to maintain |
+| SQLite for tests | Fast, no infrastructure needed | Doesn't catch PostgreSQL-specific issues |

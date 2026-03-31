@@ -1,5 +1,7 @@
 version: "3.8"
 
+# Legacy MongoDB setup.
+# Usage: docker compose -f docker-compose.mongo.yml up
 services:
   app:
     build: .
@@ -7,26 +9,22 @@ services:
       - "5000:5000"
     environment:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
-      - DATABASE_URL=postgresql://pm_user:pm_pass@postgres:5432/people_manager
+      - MONGO_URI=mongodb://mongo:27017/people_manager
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - FLASK_DEBUG=${FLASK_DEBUG:-False}
     depends_on:
-      postgres:
+      mongo:
         condition: service_healthy
     restart: unless-stopped
 
-  postgres:
-    image: postgres:16-alpine
+  mongo:
+    image: mongo:7
     ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: pm_user
-      POSTGRES_PASSWORD: pm_pass
-      POSTGRES_DB: people_manager
+      - "27017:27017"
     volumes:
-      - pg_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pm_user -d people_manager"]
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
       interval: 10s
       timeout: 5s
       retries: 5
@@ -34,4 +32,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  pg_data:
+  mongo_data:

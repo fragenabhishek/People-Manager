@@ -18,9 +18,11 @@ class Config:
 
     SECRET_KEY: str = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-    # Database
+    # Database — priority: DATABASE_URL (SQL) > MONGO_URI > JSON files
+    DATABASE_URL: Optional[str] = os.environ.get('DATABASE_URL')
+    USE_SQL: bool = DATABASE_URL is not None
     MONGO_URI: Optional[str] = os.environ.get('MONGO_URI')
-    USE_MONGODB: bool = MONGO_URI is not None
+    USE_MONGODB: bool = MONGO_URI is not None and DATABASE_URL is None
     DATA_FILE: str = 'data.json'
     USERS_FILE: str = 'users.json'
     NOTES_FILE: str = 'notes.json'
@@ -81,6 +83,11 @@ class Config:
                     "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
                 )
 
-        storage = f"MongoDB ({cls.DB_NAME})" if cls.USE_MONGODB else f"Local JSON ({cls.DATA_FILE})"
+        if cls.USE_SQL:
+            storage = f"SQL ({cls.DATABASE_URL.split('@')[-1] if '@' in cls.DATABASE_URL else cls.DATABASE_URL})"
+        elif cls.USE_MONGODB:
+            storage = f"MongoDB ({cls.DB_NAME})"
+        else:
+            storage = f"Local JSON ({cls.DATA_FILE})"
         logger.info("Storage: %s", storage)
         logger.info("AI: %s", f"enabled ({cls.GEMINI_MODEL})" if cls.AI_ENABLED else "disabled")

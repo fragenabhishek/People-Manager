@@ -88,6 +88,21 @@ def _configure_rate_limiter(app: Flask):
 
 
 def _init_repositories():
+    if Config.USE_SQL:
+        from models.database import create_tables, init_db
+        from repositories.sql_note_repository import SqlNoteRepository
+        from repositories.sql_person_repository import SqlPersonRepository
+        from repositories.sql_user_repository import SqlUserRepository
+
+        init_db(Config.DATABASE_URL, echo=Config.DEBUG)
+        create_tables()
+        from models.database import get_session_factory
+        sf = get_session_factory()
+        return (
+            SqlPersonRepository(sf),
+            SqlUserRepository(sf),
+            SqlNoteRepository(sf),
+        )
     if Config.USE_MONGODB:
         client = MongoClient(Config.MONGO_URI)
         db = client[Config.DB_NAME]
@@ -130,16 +145,21 @@ def _register_error_handlers(app: Flask):
     @app.route('/health')
     def health():
         db_ok = True
-        if Config.USE_MONGODB:
+        if Config.USE_SQL:
+            storage = 'postgresql'
+        elif Config.USE_MONGODB:
+            storage = 'mongodb'
             try:
                 client = app.config.get('_mongo_client')
                 if client:
                     client.admin.command('ping')
             except Exception:
                 db_ok = False
+        else:
+            storage = 'json'
         return {
             'status': 'ok' if db_ok else 'degraded',
-            'storage': 'mongodb' if Config.USE_MONGODB else 'json',
+            'storage': storage,
             'ai': Config.AI_ENABLED,
             'db_connected': db_ok,
         }
