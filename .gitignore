@@ -61,6 +61,11 @@ notes.md
 *.swo
 *~
 
+# Node / Frontend
+node_modules/
+frontend/.next/
+frontend/out/
+
 # OS
 .DS_Store
 Thumbs.db
