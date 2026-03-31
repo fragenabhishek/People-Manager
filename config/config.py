@@ -3,42 +3,43 @@ Configuration management module
 Centralizes all configuration settings with proper validation
 """
 import os
+import logging
 from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 
 class Config:
     """Application configuration with environment variable support"""
 
-    # Flask Configuration
     SECRET_KEY: str = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-    # Database Configuration
+    # Database
     MONGO_URI: Optional[str] = os.environ.get('MONGO_URI')
     USE_MONGODB: bool = MONGO_URI is not None
     DATA_FILE: str = 'data.json'
     USERS_FILE: str = 'users.json'
     NOTES_FILE: str = 'notes.json'
 
-    # Database Collection Names
     DB_NAME: str = 'people_manager'
     PEOPLE_COLLECTION: str = 'people'
     USERS_COLLECTION: str = 'users'
     NOTES_COLLECTION: str = 'notes'
 
-    # AI Configuration
+    # AI
     GEMINI_API_KEY: Optional[str] = os.environ.get('GEMINI_API_KEY')
     GEMINI_MODEL: str = 'gemini-2.5-flash'
     AI_ENABLED: bool = GEMINI_API_KEY is not None
 
-    # Server Configuration
+    # Server
     HOST: str = '0.0.0.0'
     PORT: int = int(os.environ.get('PORT', 5000))
     DEBUG: bool = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
 
-    # Security Configuration
+    # Security
     PASSWORD_MIN_LENGTH: int = 6
     USERNAME_MIN_LENGTH: int = 3
     SESSION_PERMANENT: bool = False
@@ -55,7 +56,6 @@ class Config:
     # Relationship Scoring Thresholds (days)
     RELATIONSHIP_WARM_DAYS: int = 14
     RELATIONSHIP_LUKEWARM_DAYS: int = 30
-    # Anything beyond LUKEWARM_DAYS is considered "cold"
 
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
@@ -67,16 +67,15 @@ class Config:
 
     @classmethod
     def validate(cls) -> None:
-        """Validate configuration settings"""
-        if cls.DEBUG and cls.SECRET_KEY == 'dev-secret-key-change-in-production':
-            print("WARNING: Using default secret key in development mode")
+        if cls.SECRET_KEY == 'dev-secret-key-change-in-production':
+            if cls.DEBUG:
+                logger.warning("Using default secret key — acceptable only in dev mode")
+            else:
+                raise RuntimeError(
+                    "SECRET_KEY must be set in production. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+                )
 
-        if cls.USE_MONGODB:
-            print(f"MongoDB enabled: {cls.DB_NAME}")
-        else:
-            print(f"Using local file storage: {cls.DATA_FILE}")
-
-        if cls.AI_ENABLED:
-            print(f"AI features enabled: {cls.GEMINI_MODEL}")
-        else:
-            print("AI features disabled: GEMINI_API_KEY not set")
+        storage = f"MongoDB ({cls.DB_NAME})" if cls.USE_MONGODB else f"Local JSON ({cls.DATA_FILE})"
+        logger.info("Storage: %s", storage)
+        logger.info("AI: %s", f"enabled ({cls.GEMINI_MODEL})" if cls.AI_ENABLED else "disabled")

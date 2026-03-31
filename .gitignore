@@ -43,6 +43,9 @@ notes.json
 app_old.py
 *_old.py
 
+# Test artifacts
+test_all_features.py
+
 # Chat history and notes (local only)
 CHAT_HISTORY.md
 AUTH_SETUP.md

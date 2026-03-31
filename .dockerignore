@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+data.json
+users.json
+notes.json
+.git/
+.gitignore
+*.md
+docs/
+test_all_features.py
+.vscode/
+.idea/

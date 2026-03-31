@@ -2,89 +2,77 @@
 AI-powered features routes
 Handles person blueprint, Q&A, and tag suggestions
 """
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, session, current_app
 
-from services.ai_service import AIService
-from services.person_service import PersonService
-from services.note_service import NoteService
 from middleware.auth_middleware import login_required
 from utils.response import APIResponse
-from utils.logger import get_logger
-
-logger = get_logger(__name__)
 
 ai_bp = Blueprint('ai_routes', __name__, url_prefix='/api')
 
-ai_service: AIService = None
-person_service: PersonService = None
-note_service: NoteService = None
+
+def init_ai_routes(ai_svc, person_svc, note_svc=None):
+    ai_bp.record(lambda state: state.app.config.update(
+        ai_service=ai_svc,
+        _ai_person_service=person_svc,
+        _ai_note_service=note_svc,
+    ))
 
 
-def init_ai_routes(ai_svc: AIService, person_svc: PersonService, note_svc: NoteService = None):
-    global ai_service, person_service, note_service
-    ai_service = ai_svc
-    person_service = person_svc
-    note_service = note_svc
+def _ai():
+    return current_app.config['ai_service']
+
+def _people():
+    return current_app.config['_ai_person_service']
+
+def _notes():
+    return current_app.config['_ai_note_service']
 
 
 @ai_bp.route('/people/<person_id>/summary', methods=['POST'])
 @login_required
 def generate_summary(person_id):
-    try:
-        if not ai_service.is_enabled():
-            return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
-        user_id = session.get('user_id')
-        person = person_service.get_person_by_id(person_id, user_id)
-        if not person:
-            return APIResponse.not_found('Person not found')
+    if not _ai().is_enabled():
+        return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
 
-        notes = []
-        if note_service:
-            notes = note_service.get_notes_for_person(person_id, user_id)
-        result = ai_service.generate_person_blueprint(person, notes)
-        return jsonify(result)
-    except ValueError as e:
-        return APIResponse.validation_error(str(e))
-    except Exception as e:
-        logger.error(f"Error generating summary: {e}")
-        return APIResponse.server_error()
+    person = _people().get_person_by_id(person_id, session['user_id'])
+    if not person:
+        return APIResponse.not_found('Person not found')
+
+    notes = []
+    if _notes():
+        notes = _notes().get_notes_for_person(person_id, session['user_id'])
+    result = _ai().generate_person_blueprint(person, notes)
+    return APIResponse.success(result)
 
 
 @ai_bp.route('/ask', methods=['POST'])
 @login_required
 def central_ask():
-    try:
-        if not ai_service.is_enabled():
-            return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
-        data = request.get_json()
-        question = data.get('question', '').strip()
-        if not question:
-            return APIResponse.validation_error('Question is required')
-        user_id = session.get('user_id')
-        people = person_service.get_all_people(user_id)
-        if not people:
-            return APIResponse.validation_error('No people in your contacts yet')
-        result = ai_service.answer_question(question, people)
-        return jsonify(result)
-    except ValueError as e:
-        return APIResponse.validation_error(str(e))
-    except Exception as e:
-        logger.error(f"Error answering question: {e}")
-        return APIResponse.server_error()
+    if not _ai().is_enabled():
+        return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
+
+    data = request.get_json()
+    question = data.get('question', '').strip()
+    if not question:
+        return APIResponse.validation_error('Question is required')
+
+    people = _people().get_all_people(session['user_id'])
+    if not people:
+        return APIResponse.validation_error('No people in your contacts yet')
+
+    result = _ai().answer_question(question, people)
+    return APIResponse.success(result)
 
 
 @ai_bp.route('/people/<person_id>/suggest-tags', methods=['POST'])
 @login_required
 def suggest_tags(person_id):
-    try:
-        if not ai_service.is_enabled():
-            return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
-        user_id = session.get('user_id')
-        person = person_service.get_person_by_id(person_id, user_id)
-        if not person:
-            return APIResponse.not_found('Person not found')
-        tags = ai_service.suggest_tags(person)
-        return jsonify({'tags': tags})
-    except Exception as e:
-        logger.error(f"Error suggesting tags: {e}")
-        return APIResponse.server_error()
+    if not _ai().is_enabled():
+        return APIResponse.error('AI feature not configured. Set GEMINI_API_KEY.', 503)
+
+    person = _people().get_person_by_id(person_id, session['user_id'])
+    if not person:
+        return APIResponse.not_found('Person not found')
+
+    tags = _ai().suggest_tags(person)
+    return APIResponse.success({'tags': tags})

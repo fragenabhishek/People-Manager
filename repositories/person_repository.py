@@ -4,6 +4,7 @@ Implements Repository Pattern for data access abstraction
 """
 import json
 import os
+import uuid
 from typing import List, Optional
 from datetime import datetime
 
@@ -89,7 +90,7 @@ class PersonRepository(BaseRepository[Person]):
 
     def create(self, entity: Person) -> Person:
         if not entity.id:
-            entity.id = str(int(datetime.now().timestamp() * 1000))
+            entity.id = str(uuid.uuid4())
         if self.use_mongodb:
             return self._create_mongodb(entity)
         return self._create_json(entity)

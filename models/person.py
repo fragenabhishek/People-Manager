@@ -79,8 +79,8 @@ class Person:
             'relationship_status': self.relationship_status,
             'last_interaction_at': self.last_interaction_at,
             'interaction_count': self.interaction_count,
-            'createdAt': self.created_at,
-            'updatedAt': self.updated_at,
+            'created_at': self.created_at,
+            'updated_at': self.updated_at,
         }
 
     @staticmethod
@@ -111,8 +111,8 @@ class Person:
             relationship_status=data.get('relationship_status', 'new'),
             last_interaction_at=data.get('last_interaction_at', ''),
             interaction_count=data.get('interaction_count', 0),
-            created_at=data.get('createdAt') or data.get('created_at', datetime.now().isoformat()),
-            updated_at=data.get('updatedAt') or data.get('updated_at', datetime.now().isoformat()),
+            created_at=data.get('created_at') or data.get('createdAt', datetime.now().isoformat()),
+            updated_at=data.get('updated_at') or data.get('updatedAt', datetime.now().isoformat()),
         )
 
     def update(self, **kwargs) -> None:

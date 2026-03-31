@@ -3,6 +3,7 @@ User repository with dual storage support (MongoDB/JSON)
 """
 import json
 import os
+import uuid
 from typing import List, Optional
 from datetime import datetime
 
@@ -125,7 +126,7 @@ class UserRepository(BaseRepository[User]):
         """Create new user"""
         # Generate ID if not present
         if not entity.id:
-            entity.id = str(int(datetime.now().timestamp() * 1000))
+            entity.id = str(uuid.uuid4())
         
         if self.use_mongodb:
             return self._create_mongodb(entity)

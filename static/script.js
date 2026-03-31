@@ -10,6 +10,23 @@ let allPeople = [];
 let currentPersonId = null;
 let currentTagFilter = null;
 let confirmResolve = null;
+let searchTimeout = null;
+
+// ---- API Helper ----
+async function api(url, opts = {}) {
+    const resp = await fetch(url, opts);
+    if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        const err = new Error(body.error || `Request failed (${resp.status})`);
+        err.status = resp.status;
+        err.body = body;
+        throw err;
+    }
+    const ct = resp.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) return resp;
+    const body = await resp.json();
+    return body.data !== undefined ? body.data : body;
+}
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded', () => {
@@ -55,8 +72,7 @@ async function loadPeople() {
     try {
         let url = API;
         if (currentTagFilter) url += '?tag=' + encodeURIComponent(currentTagFilter);
-        const resp = await fetch(url);
-        allPeople = await resp.json();
+        allPeople = await api(url);
         renderPeople(allPeople);
     } catch (e) { console.error(e); showToast('Failed to load contacts', 'error'); }
 }
@@ -90,20 +106,21 @@ function renderPeople(people) {
 }
 
 // ---- Search ----
-async function handleSearch(e) {
+function handleSearch(e) {
     const q = e.target.value.trim();
     if (!q) { renderPeople(allPeople); return; }
-    try {
-        const resp = await fetch(`${API}/search/${encodeURIComponent(q)}`);
-        renderPeople(await resp.json());
-    } catch (e) { console.error(e); }
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(async () => {
+        try {
+            renderPeople(await api(`${API}/search/${encodeURIComponent(q)}`));
+        } catch (err) { console.error(err); }
+    }, 300);
 }
 
 // ---- Tags ----
 async function loadTags() {
     try {
-        const resp = await fetch(API + '/tags');
-        const tags = await resp.json();
+        const tags = await api(API + '/tags');
         const el = document.getElementById('tagList');
         el.innerHTML = tags.map(t => `<button class="tag-btn ${currentTagFilter === t ? 'active' : ''}" onclick="filterByTag('${escapeAttr(t)}')">${escapeHtml(t)}</button>`).join('');
     } catch (e) { console.error(e); }
@@ -181,21 +198,16 @@ async function handlePersonSubmit(e) {
         follow_up_frequency_days: parseInt(document.getElementById('personFollowFreq').value) || 0,
     };
     try {
-        const resp = await fetch(id ? `${API}/${id}` : API, {
+        await api(id ? `${API}/${id}` : API, {
             method: id ? 'PUT' : 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
         });
-        if (resp.ok) {
-            closePersonModal();
-            showToast(id ? 'Contact updated!' : 'Contact added!', 'success');
-            loadPeople(); loadTags();
-            if (currentPersonId === id) openDrawer(id);
-        } else {
-            const err = await resp.json();
-            showToast(err.error || 'Failed to save', 'error');
-        }
-    } catch (e) { showToast('Failed to save contact', 'error'); }
+        closePersonModal();
+        showToast(id ? 'Contact updated!' : 'Contact added!', 'success');
+        loadPeople(); loadTags();
+        if (currentPersonId === id) openDrawer(id);
+    } catch (e) { showToast(e.body?.error || 'Failed to save contact', 'error'); }
 }
 
 // ---- Person Detail Drawer ----
@@ -205,12 +217,10 @@ async function openDrawer(id) {
     drawer.classList.add('open');
     document.body.style.overflow = 'hidden';
     try {
-        const [personResp, notesResp] = await Promise.all([
-            fetch(`${API}/${id}`),
-            fetch(`${NOTES_API}/person/${id}`)
+        const [person, notes] = await Promise.all([
+            api(`${API}/${id}`),
+            api(`${NOTES_API}/person/${id}`)
         ]);
-        const person = await personResp.json();
-        const notes = await notesResp.json();
         document.getElementById('drawerName').textContent = person.name;
         document.getElementById('drawerBody').innerHTML = renderDrawerContent(person, notes);
     } catch (e) {
@@ -279,8 +289,8 @@ async function deleteCurrentPerson() {
     const ok = await showConfirm(`Delete ${person.name}?`, 'Delete Contact');
     if (!ok) return;
     try {
-        const resp = await fetch(`${API}/${currentPersonId}`, { method: 'DELETE' });
-        if (resp.ok) { closeDrawer(); showToast('Contact deleted', 'success'); loadPeople(); loadTags(); }
+        await api(`${API}/${currentPersonId}`, { method: 'DELETE' });
+        closeDrawer(); showToast('Contact deleted', 'success'); loadPeople(); loadTags();
     } catch (e) { showToast('Failed to delete', 'error'); }
 }
 
@@ -298,24 +308,23 @@ async function handleNoteSubmit(e) {
     const personId = document.getElementById('notePersonId').value;
     const data = { content: document.getElementById('noteContent').value, note_type: document.getElementById('noteType').value };
     try {
-        const resp = await fetch(`${NOTES_API}/person/${personId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-        if (resp.ok) { closeNoteModal(); showToast('Note added!', 'success'); openDrawer(personId); loadPeople(); }
-        else { const err = await resp.json(); showToast(err.error || 'Failed', 'error'); }
-    } catch (e) { showToast('Failed to add note', 'error'); }
+        await api(`${NOTES_API}/person/${personId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        closeNoteModal(); showToast('Note added!', 'success'); openDrawer(personId); loadPeople();
+    } catch (e) { showToast(e.body?.error || 'Failed to add note', 'error'); }
 }
 
 async function deleteNote(noteId) {
     try {
-        const resp = await fetch(`${NOTES_API}/${noteId}`, { method: 'DELETE' });
-        if (resp.ok) { showToast('Note deleted', 'success'); if (currentPersonId) openDrawer(currentPersonId); }
+        await api(`${NOTES_API}/${noteId}`, { method: 'DELETE' });
+        showToast('Note deleted', 'success'); if (currentPersonId) openDrawer(currentPersonId);
     } catch (e) { showToast('Failed', 'error'); }
 }
 
 // ---- Follow-ups ----
 async function completeFollowUp(personId) {
     try {
-        const resp = await fetch(`${API}/${personId}/followup/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        if (resp.ok) { showToast('Follow-up completed!', 'success'); loadPeople(); if (currentPersonId === personId) openDrawer(personId); }
+        await api(`${API}/${personId}/followup/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        showToast('Follow-up completed!', 'success'); loadPeople(); if (currentPersonId === personId) openDrawer(personId);
     } catch (e) { showToast('Failed', 'error'); }
 }
 
@@ -326,16 +335,12 @@ async function generateBlueprint(personId) {
     btn.disabled = true; btn.textContent = 'Generating...';
     content.innerHTML = '<div class="ai-loading">Analyzing contact data...</div>';
     try {
-        const resp = await fetch(`${API}/${personId}/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-        if (resp.ok) {
-            const data = await resp.json();
-            content.innerHTML = `<div class="ai-result">${data.summary}</div>`;
-            showToast('Blueprint generated!', 'success');
-        } else {
-            const err = await resp.json();
-            content.innerHTML = `<div class="ai-error">${escapeHtml(err.error || 'Failed')}</div>`;
-        }
-    } catch (e) { content.innerHTML = '<div class="ai-error">Failed to generate. Try again.</div>'; }
+        const data = await api(`${API}/${personId}/summary`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        content.innerHTML = `<div class="ai-result">${data.summary}</div>`;
+        showToast('Blueprint generated!', 'success');
+    } catch (e) {
+        content.innerHTML = `<div class="ai-error">${escapeHtml(e.body?.error || 'Failed to generate. Try again.')}</div>`;
+    }
     btn.disabled = false; btn.textContent = 'Regenerate Blueprint';
 }
 
@@ -361,23 +366,18 @@ async function askAI() {
     const btn = document.getElementById('qaAskBtn');
     btn.disabled = true;
     try {
-        const resp = await fetch(ASK_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) });
-        if (resp.ok) {
-            const data = await resp.json();
-            item.querySelector('.qa-a').innerHTML = `<strong>A:</strong> ${data.answer}`;
-        } else {
-            const err = await resp.json();
-            item.querySelector('.qa-a').innerHTML = `<strong>A:</strong> <span class="ai-error">${escapeHtml(err.error || 'Failed')}</span>`;
-        }
-    } catch (e) { item.querySelector('.qa-a').innerHTML = '<strong>A:</strong> <span class="ai-error">Failed.</span>'; }
+        const data = await api(ASK_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q }) });
+        item.querySelector('.qa-a').innerHTML = `<strong>A:</strong> ${data.answer}`;
+    } catch (e) {
+        item.querySelector('.qa-a').innerHTML = `<strong>A:</strong> <span class="ai-error">${escapeHtml(e.body?.error || 'Failed.')}</span>`;
+    }
     btn.disabled = false;
 }
 
 // ---- Dashboard ----
 async function loadDashboard() {
     try {
-        const resp = await fetch(API + '/dashboard/stats');
-        const s = await resp.json();
+        const s = await api(API + '/dashboard/stats');
         document.getElementById('statTotal').textContent = s.total_contacts;
         document.getElementById('statWeek').textContent = s.added_this_week;
         document.getElementById('statFollowups').textContent = s.due_followups;
@@ -396,7 +396,7 @@ async function loadDashboard() {
         ).join('') || '<p class="text-muted">No follow-ups due</p>';
 
         document.getElementById('recentList').innerHTML = (s.recently_added || []).map(p =>
-            `<div class="mini-item" onclick="openDrawer('${p.id}')"><strong>${escapeHtml(p.name)}</strong><span class="text-muted">${formatDate(p.createdAt)}</span></div>`
+            `<div class="mini-item" onclick="openDrawer('${p.id}')"><strong>${escapeHtml(p.name)}</strong><span class="text-muted">${formatDate(p.created_at)}</span></div>`
         ).join('') || '<p class="text-muted">No contacts yet</p>';
 
         const tagBreak = document.getElementById('tagBreakdown');
@@ -410,8 +410,7 @@ async function loadDashboard() {
 // ---- Activity Feed ----
 async function loadActivity() {
     try {
-        const resp = await fetch(NOTES_API + '/activity?limit=30');
-        const items = await resp.json();
+        const items = await api(NOTES_API + '/activity?limit=30');
         document.getElementById('activityFeed').innerHTML = items.map(a => {
             const typeIcon = { meeting: '&#128197;', call: '&#128222;', email: '&#9993;', event: '&#127881;', follow_up: '&#128276;' }[a.note.note_type] || '&#128221;';
             return `<div class="activity-item" onclick="openDrawer('${a.person_id}')"><div class="activity-icon">${typeIcon}</div><div class="activity-body"><strong>${escapeHtml(a.person_name)}</strong> &mdash; ${escapeHtml(a.note.content.substring(0, 120))}${a.note.content.length > 120 ? '...' : ''}<div class="activity-date">${formatDate(a.note.created_at)}</div></div></div>`;
@@ -430,8 +429,7 @@ async function handleImport(e) {
     const fd = new FormData();
     fd.append('file', file);
     try {
-        const resp = await fetch(API + '/import/csv', { method: 'POST', body: fd });
-        const result = await resp.json();
+        const result = await api(API + '/import/csv', { method: 'POST', body: fd });
         const el = document.getElementById('importResult');
         el.style.display = 'block';
         el.innerHTML = `<p><strong>${result.imported}</strong> imported, <strong>${result.skipped}</strong> skipped.</p>${result.errors.length ? '<p class="text-muted">' + result.errors.join('<br>') + '</p>' : ''}`;

@@ -2,6 +2,7 @@
 Person service - handles contact management business logic
 """
 from typing import List, Optional
+from collections import defaultdict
 from datetime import datetime, timedelta
 
 from models.person import Person
@@ -24,10 +25,14 @@ class PersonService:
     def get_all_people(self, user_id: str) -> List[Person]:
         people = self.person_repository.find_all({'user_id': user_id})
         if self.note_repository:
+            all_notes = self.note_repository.find_all({'user_id': user_id})
+            notes_by_person = defaultdict(list)
+            for note in all_notes:
+                notes_by_person[note.person_id].append(note)
             for person in people:
                 old_score = person.relationship_score
                 old_status = person.relationship_status
-                self._refresh_relationship_score(person)
+                self._refresh_relationship_score(person, notes_by_person.get(person.id, []))
                 if person.relationship_score != old_score or person.relationship_status != old_status:
                     self.person_repository.update(person.id, person)
         logger.debug(f"Retrieved {len(people)} people for user {user_id}")
@@ -38,6 +43,13 @@ class PersonService:
         if person and person.user_id != user_id:
             logger.warning(f"Unauthorized access attempt: user {user_id} -> person {person_id}")
             return None
+        if person and self.note_repository:
+            notes = self.note_repository.find_by_person(person_id, user_id)
+            old_score = person.relationship_score
+            old_status = person.relationship_status
+            self._refresh_relationship_score(person, notes)
+            if person.relationship_score != old_score or person.relationship_status != old_status:
+                self.person_repository.update(person.id, person)
         return person
 
     def search_people(self, query: str, user_id: str) -> List[Person]:
@@ -184,12 +196,13 @@ class PersonService:
 
     # --- Relationship scoring ---
 
-    def _refresh_relationship_score(self, person: Person) -> None:
+    def _refresh_relationship_score(self, person: Person, notes: list = None) -> None:
         """Recalculate relationship score in-place based on interaction history"""
         if not self.note_repository:
             return
 
-        notes = self.note_repository.find_by_person(person.id, person.user_id)
+        if notes is None:
+            notes = self.note_repository.find_by_person(person.id, person.user_id)
         person.interaction_count = len(notes)
 
         if not notes:
