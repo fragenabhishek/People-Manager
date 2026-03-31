@@ -17,6 +17,6 @@ def test_landing_page(client):
 
 
 def test_dashboard_requires_login(client):
-    resp = client.get('/dashboard')
-    assert resp.status_code == 302
-    assert '/login' in resp.headers['Location']
+    resp = client.get('/dashboard', follow_redirects=False)
+    assert resp.status_code == 307
+    assert '/login' in resp.headers['location']

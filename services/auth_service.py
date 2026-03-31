@@ -4,8 +4,6 @@ Handles user authentication, registration, and password management.
 """
 from typing import Optional
 
-from flask_bcrypt import Bcrypt
-
 from config import Config
 from models.user import User
 from repositories.user_repository import UserRepository
@@ -17,9 +15,9 @@ logger = get_logger(__name__)
 
 class AuthService:
 
-    def __init__(self, user_repository: UserRepository, bcrypt: Bcrypt):
+    def __init__(self, user_repository: UserRepository, hasher):
         self.user_repository = user_repository
-        self.bcrypt = bcrypt
+        self.bcrypt = hasher
 
     def register_user(
         self,

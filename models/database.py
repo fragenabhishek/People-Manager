@@ -4,6 +4,7 @@ Importable by repositories, Alembic, and the app factory.
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 class Base(DeclarativeBase):
@@ -19,10 +20,13 @@ def init_db(database_url: str, echo: bool = False):
     global _engine, SessionLocal
 
     connect_args = {}
+    extra_kwargs = {}
     if database_url.startswith("sqlite"):
         connect_args["check_same_thread"] = False
+        if ":memory:" in database_url:
+            extra_kwargs["poolclass"] = StaticPool
 
-    _engine = create_engine(database_url, echo=echo, connect_args=connect_args)
+    _engine = create_engine(database_url, echo=echo, connect_args=connect_args, **extra_kwargs)
     SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
     return _engine
 
