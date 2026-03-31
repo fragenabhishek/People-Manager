@@ -48,6 +48,10 @@ class Config:
     SESSION_COOKIE_SAMESITE: str = 'Lax'
     WTF_CSRF_ENABLED: bool = True
 
+    # JWT
+    JWT_ACCESS_TOKEN_MINUTES: int = int(os.environ.get('JWT_ACCESS_TOKEN_MINUTES', 15))
+    JWT_REFRESH_TOKEN_MINUTES: int = int(os.environ.get('JWT_REFRESH_TOKEN_MINUTES', 10080))  # 7 days
+
     # Rate Limiting
     RATE_LIMIT_DEFAULT: str = "200 per day"
     RATE_LIMIT_LOGIN: str = "10 per minute"

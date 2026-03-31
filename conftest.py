@@ -8,7 +8,7 @@ import tempfile
 import pytest
 
 os.environ.setdefault('FLASK_DEBUG', 'True')
-os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-pytest')
+os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-pytest-32chars!')
 
 from app import create_app
 

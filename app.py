@@ -15,12 +15,13 @@ from middleware import login_required
 from repositories.note_repository import NoteRepository
 from repositories.person_repository import PersonRepository
 from repositories.user_repository import UserRepository
-from routes import ai_bp, auth_bp, note_bp, person_bp
+from routes import ai_bp, api_auth_bp, auth_bp, note_bp, person_bp
 from services.ai_service import AIService
 from services.auth_service import AuthService
 from services.import_export_service import ImportExportService
 from services.note_service import NoteService
 from services.person_service import PersonService
+from services.token_service import TokenService
 from utils.logger import setup_logger
 from utils.response import APIResponse
 from utils.validators import ValidationError
@@ -40,6 +41,11 @@ def create_app() -> Flask:
 
     people_repo, user_repo, note_repo = _init_repositories()
 
+    app.config['token_service'] = TokenService(
+        Config.SECRET_KEY,
+        access_ttl_minutes=Config.JWT_ACCESS_TOKEN_MINUTES,
+        refresh_ttl_minutes=Config.JWT_REFRESH_TOKEN_MINUTES,
+    )
     app.config['auth_service'] = AuthService(user_repo, bcrypt)
     app.config['person_service'] = PersonService(people_repo, note_repo)
     app.config['ai_service'] = AIService()
@@ -47,6 +53,7 @@ def create_app() -> Flask:
     app.config['import_export_service'] = ImportExportService(people_repo)
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(api_auth_bp)
     app.register_blueprint(person_bp)
     app.register_blueprint(ai_bp)
     app.register_blueprint(note_bp)

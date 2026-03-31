@@ -1,7 +1,6 @@
 """
 Authentication service
-Handles user authentication and registration logic
-Single Responsibility: Authentication and user management
+Handles user authentication, registration, and password management.
 """
 from typing import Optional
 
@@ -17,19 +16,8 @@ logger = get_logger(__name__)
 
 
 class AuthService:
-    """
-    Authentication service
-    Encapsulates all authentication-related business logic
-    """
 
     def __init__(self, user_repository: UserRepository, bcrypt: Bcrypt):
-        """
-        Initialize auth service with dependencies
-
-        Args:
-            user_repository: User repository for data access
-            bcrypt: Bcrypt instance for password hashing
-        """
         self.user_repository = user_repository
         self.bcrypt = bcrypt
 
@@ -38,24 +26,8 @@ class AuthService:
         username: str,
         password: str,
         confirm_password: str,
-        email: Optional[str] = None
+        email: Optional[str] = None,
     ) -> User:
-        """
-        Register a new user
-
-        Args:
-            username: User's username
-            password: User's password
-            confirm_password: Password confirmation
-            email: Optional email address
-
-        Returns:
-            Created User entity
-
-        Raises:
-            ValidationError: If validation fails
-        """
-        # Validate input
         try:
             Validator.validate_user_registration(
                 username=username.strip(),
@@ -63,68 +35,78 @@ class AuthService:
                 confirm_password=confirm_password,
                 email=email.strip() if email else None,
                 min_username_length=Config.USERNAME_MIN_LENGTH,
-                min_password_length=Config.PASSWORD_MIN_LENGTH
+                min_password_length=Config.PASSWORD_MIN_LENGTH,
             )
-        except ValidationError as e:
-            logger.warning(f"User registration validation failed: {e}")
+        except ValidationError:
             raise
 
-        # Check if username already exists
         if self.user_repository.find_by_username(username.strip()):
-            logger.warning(f"Registration attempt with existing username: {username}")
             raise ValidationError("Username already exists")
 
-        # Create user
         password_hash = self.bcrypt.generate_password_hash(password).decode('utf-8')
         user = User(
             username=username.strip(),
             password_hash=password_hash,
-            email=email.strip() if email else None
+            email=email.strip() if email else None,
         )
 
         created_user = self.user_repository.create(user)
-        logger.info(f"User registered successfully: {created_user.username}")
+        logger.info(f"User registered: {created_user.username}")
         return created_user
 
     def authenticate_user(self, username: str, password: str) -> Optional[User]:
-        """
-        Authenticate a user
-
-        Args:
-            username: User's username
-            password: User's password
-
-        Returns:
-            User entity if authentication successful, None otherwise
-        """
-        # Validate input
         try:
             Validator.validate_required(username, "Username")
             Validator.validate_required(password, "Password")
-        except ValidationError as e:
-            logger.warning(f"Authentication validation failed: {e}")
+        except ValidationError:
             return None
 
-        # Find user
         user = self.user_repository.find_by_username(username.strip())
-
         if not user:
-            logger.warning(f"Authentication failed: user not found - {username}")
             return None
-
-        # Verify password
         if not self.bcrypt.check_password_hash(user.password_hash, password):
-            logger.warning(f"Authentication failed: invalid password - {username}")
             return None
 
-        logger.info(f"User authenticated successfully: {username}")
+        logger.info(f"User authenticated: {username}")
         return user
 
+    def change_password(self, user_id: str, current_password: str, new_password: str, confirm_password: str) -> bool:
+        """Change password for authenticated user."""
+        user = self.user_repository.find_by_id(user_id)
+        if not user:
+            raise ValidationError("User not found")
+
+        if not self.bcrypt.check_password_hash(user.password_hash, current_password):
+            raise ValidationError("Current password is incorrect")
+
+        Validator.validate_min_length(new_password, Config.PASSWORD_MIN_LENGTH, "New password")
+        Validator.validate_password_match(new_password, confirm_password)
+
+        user.password_hash = self.bcrypt.generate_password_hash(new_password).decode('utf-8')
+        self.user_repository.update(user.id, user)
+        logger.info(f"Password changed for user {user.username}")
+        return True
+
+    def reset_password(self, user_id: str, new_password: str) -> bool:
+        """Reset password using a verified reset token (token already validated by caller)."""
+        user = self.user_repository.find_by_id(user_id)
+        if not user:
+            raise ValidationError("User not found")
+
+        Validator.validate_min_length(new_password, Config.PASSWORD_MIN_LENGTH, "New password")
+
+        user.password_hash = self.bcrypt.generate_password_hash(new_password).decode('utf-8')
+        self.user_repository.update(user.id, user)
+        logger.info(f"Password reset for user {user.username}")
+        return True
+
     def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
         return self.user_repository.find_by_id(user_id)
 
     def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
         return self.user_repository.find_by_username(username)
 
+    def find_user_by_email(self, email: str) -> Optional[User]:
+        """Find user by email address (for password reset)."""
+        users = self.user_repository.find_all()
+        return next((u for u in users if u.email and u.email.lower() == email.lower()), None)
