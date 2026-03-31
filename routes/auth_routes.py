@@ -2,22 +2,17 @@
 Authentication routes
 Handles login, logout, and registration endpoints
 """
-from flask import Blueprint, render_template, request, session, redirect, url_for, current_app
+from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 
-from utils.validators import ValidationError
 from utils.logger import get_logger
+from utils.validators import ValidationError
 
 logger = get_logger(__name__)
 
 auth_bp = Blueprint('auth_routes', __name__)
 
 
-def init_auth_routes(service):
-    """Store service on the blueprint for access via current_app"""
-    auth_bp.record(lambda state: state.app.config.update(auth_service=service))
-
-
-def _get_service():
+def _svc():
     return current_app.config['auth_service']
 
 
@@ -30,7 +25,7 @@ def register():
         email = request.form.get('email', '').strip()
 
         try:
-            _get_service().register_user(username, password, confirm_password, email or None)
+            _svc().register_user(username, password, confirm_password, email or None)
             logger.info(f"User registered: {username}")
             return redirect(url_for('auth_routes.login', registered='true'))
         except ValidationError as e:
@@ -51,7 +46,7 @@ def login():
         if not username or not password:
             return render_template('login.html', error='Username and password are required')
 
-        user = _get_service().authenticate_user(username, password)
+        user = _svc().authenticate_user(username, password)
 
         if user:
             session.clear()

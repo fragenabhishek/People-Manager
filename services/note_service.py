@@ -1,14 +1,14 @@
 """
 Note service - handles interaction notes business logic
 """
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
-from models.note import Note, NOTE_TYPES
+from models.note import NOTE_TYPES, Note
 from repositories.note_repository import NoteRepository
 from repositories.person_repository import PersonRepository
-from utils.validators import ValidationError
 from utils.logger import get_logger
+from utils.validators import ValidationError
 
 logger = get_logger(__name__)
 

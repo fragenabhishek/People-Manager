@@ -1,59 +1,65 @@
 """
 Logging utility module
-Provides structured logging for the application
+Provides human-readable logging in dev and JSON-structured logging in production.
 """
+import json
 import logging
 import sys
 from typing import Optional
-from datetime import datetime
+
+from config import Config
+
+
+class JSONFormatter(logging.Formatter):
+    """Outputs one JSON object per log line for log aggregation services."""
+
+    def format(self, record):
+        entry = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "msg": record.getMessage(),
+            "module": record.module,
+            "func": record.funcName,
+        }
+        if record.exc_info and record.exc_info[0] is not None:
+            entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(entry, default=str)
+
+
+_DEV_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 def setup_logger(
     name: str = 'people_manager',
     level: int = logging.INFO,
-    log_file: Optional[str] = None
+    log_file: Optional[str] = None,
 ) -> logging.Logger:
-    """
-    Configure and return a logger instance
-    
-    Args:
-        name: Logger name
-        level: Logging level
-        log_file: Optional file path for log output
-        
-    Returns:
-        Configured logger instance
-    """
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    
-    # Prevent duplicate handlers
+
     if logger.handlers:
         return logger
-    
-    # Create formatter
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-    
-    # File handler (optional)
+
+    if Config.DEBUG:
+        formatter = logging.Formatter(_DEV_FORMAT, datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+        formatter = JSONFormatter()
+
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(level)
+    console.setFormatter(formatter)
+    logger.addHandler(console)
+
     if log_file:
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-    
+        fh = logging.FileHandler(log_file)
+        fh.setLevel(level)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
     return logger
 
 
 def get_logger(name: str = 'people_manager') -> logging.Logger:
-    """Get existing logger or create new one"""
+    """Get existing logger or create new one."""
     return logging.getLogger(name)
-

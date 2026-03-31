@@ -4,7 +4,7 @@ Represents a person/contact in the system with structured fields
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 
 @dataclass

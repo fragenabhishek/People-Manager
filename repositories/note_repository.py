@@ -4,12 +4,12 @@ Note repository with dual storage support (MongoDB/JSON)
 import json
 import os
 import uuid
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
 
+from config import Config
 from models.note import Note
 from repositories.base_repository import BaseRepository
-from config import Config
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

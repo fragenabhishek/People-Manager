@@ -2,20 +2,13 @@
 Person/contact management routes
 Handles CRUD, tags, follow-ups, import/export
 """
-from flask import Blueprint, request, session, Response, current_app
+from flask import Blueprint, Response, current_app, request, session
 
 from middleware.auth_middleware import login_required
 from utils.response import APIResponse
 from utils.validators import ValidationError
 
 person_bp = Blueprint('person_routes', __name__, url_prefix='/api/people')
-
-
-def init_person_routes(service, ie_service=None):
-    person_bp.record(lambda state: state.app.config.update(
-        person_service=service,
-        import_export_service=ie_service,
-    ))
 
 
 def _svc():

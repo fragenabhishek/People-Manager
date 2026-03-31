@@ -2,17 +2,13 @@
 Note/interaction routes
 Handles CRUD operations for notes attached to people
 """
-from flask import Blueprint, request, session, current_app
+from flask import Blueprint, current_app, request, session
 
 from middleware.auth_middleware import login_required
 from utils.response import APIResponse
 from utils.validators import ValidationError
 
 note_bp = Blueprint('note_routes', __name__, url_prefix='/api/notes')
-
-
-def init_note_routes(service):
-    note_bp.record(lambda state: state.app.config.update(note_service=service))
 
 
 def _svc():

@@ -3,7 +3,8 @@ Authentication middleware
 Provides decorators for route protection
 """
 from functools import wraps
-from flask import session, redirect, url_for, request
+
+from flask import redirect, request, session, url_for
 
 from utils.response import APIResponse
 

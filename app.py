@@ -11,25 +11,19 @@ from flask_limiter.util import get_remote_address
 from pymongo import MongoClient
 
 from config import Config
+from middleware import login_required
+from repositories.note_repository import NoteRepository
+from repositories.person_repository import PersonRepository
+from repositories.user_repository import UserRepository
+from routes import ai_bp, auth_bp, note_bp, person_bp
+from services.ai_service import AIService
+from services.auth_service import AuthService
+from services.import_export_service import ImportExportService
+from services.note_service import NoteService
+from services.person_service import PersonService
 from utils.logger import setup_logger
 from utils.response import APIResponse
 from utils.validators import ValidationError
-from middleware import login_required
-
-from repositories.person_repository import PersonRepository
-from repositories.user_repository import UserRepository
-from repositories.note_repository import NoteRepository
-
-from services.auth_service import AuthService
-from services.person_service import PersonService
-from services.ai_service import AIService
-from services.note_service import NoteService
-from services.import_export_service import ImportExportService
-
-from routes import (
-    auth_bp, person_bp, ai_bp, note_bp,
-    init_auth_routes, init_person_routes, init_ai_routes, init_note_routes,
-)
 
 logger = setup_logger('people_manager')
 
@@ -46,16 +40,11 @@ def create_app() -> Flask:
 
     people_repo, user_repo, note_repo = _init_repositories()
 
-    auth_service = AuthService(user_repo, bcrypt)
-    person_service = PersonService(people_repo, note_repo)
-    ai_service = AIService()
-    note_service = NoteService(note_repo, people_repo)
-    ie_service = ImportExportService(people_repo)
-
-    init_auth_routes(auth_service)
-    init_person_routes(person_service, ie_service)
-    init_ai_routes(ai_service, person_service, note_service)
-    init_note_routes(note_service)
+    app.config['auth_service'] = AuthService(user_repo, bcrypt)
+    app.config['person_service'] = PersonService(people_repo, note_repo)
+    app.config['ai_service'] = AIService()
+    app.config['note_service'] = NoteService(note_repo, people_repo)
+    app.config['import_export_service'] = ImportExportService(people_repo)
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(person_bp)
@@ -63,6 +52,7 @@ def create_app() -> Flask:
     app.register_blueprint(note_bp)
 
     _register_error_handlers(app)
+    _register_security_headers(app)
     _register_main_routes(app)
 
     logger.info("Application initialized successfully")
@@ -146,6 +136,28 @@ def _register_error_handlers(app: Flask):
             'ai': Config.AI_ENABLED,
             'db_connected': db_ok,
         }
+
+
+def _register_security_headers(app: Flask):
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if not Config.DEBUG:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+        response.headers['Content-Security-Policy'] = csp
+        return response
 
 
 def _register_main_routes(app: Flask):

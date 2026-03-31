@@ -2,8 +2,8 @@
 Input validation module
 Centralizes all validation logic
 """
-from typing import Optional, Any
 import re
+from typing import Any, Optional
 
 
 class ValidationError(Exception):

@@ -1,8 +1,8 @@
 """Services package"""
-from .auth_service import AuthService
-from .person_service import PersonService
 from .ai_service import AIService
-from .note_service import NoteService
+from .auth_service import AuthService
 from .import_export_service import ImportExportService
+from .note_service import NoteService
+from .person_service import PersonService
 
 __all__ = ['AuthService', 'PersonService', 'AIService', 'NoteService', 'ImportExportService']

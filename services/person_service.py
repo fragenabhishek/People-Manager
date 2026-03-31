@@ -1,16 +1,16 @@
 """
 Person service - handles contact management business logic
 """
-from typing import List, Optional
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import List, Optional
 
-from models.person import Person
-from repositories.person_repository import PersonRepository
-from repositories.note_repository import NoteRepository
-from utils.validators import Validator, ValidationError
-from utils.logger import get_logger
 from config import Config
+from models.person import Person
+from repositories.note_repository import NoteRepository
+from repositories.person_repository import PersonRepository
+from utils.logger import get_logger
+from utils.validators import ValidationError, Validator
 
 logger = get_logger(__name__)
 

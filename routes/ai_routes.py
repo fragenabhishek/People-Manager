@@ -2,7 +2,7 @@
 AI-powered features routes
 Handles person blueprint, Q&A, and tag suggestions
 """
-from flask import Blueprint, request, session, current_app
+from flask import Blueprint, current_app, request, session
 
 from middleware.auth_middleware import login_required
 from utils.response import APIResponse
@@ -10,22 +10,14 @@ from utils.response import APIResponse
 ai_bp = Blueprint('ai_routes', __name__, url_prefix='/api')
 
 
-def init_ai_routes(ai_svc, person_svc, note_svc=None):
-    ai_bp.record(lambda state: state.app.config.update(
-        ai_service=ai_svc,
-        _ai_person_service=person_svc,
-        _ai_note_service=note_svc,
-    ))
-
-
 def _ai():
     return current_app.config['ai_service']
 
 def _people():
-    return current_app.config['_ai_person_service']
+    return current_app.config['person_service']
 
 def _notes():
-    return current_app.config['_ai_note_service']
+    return current_app.config.get('note_service')
 
 
 @ai_bp.route('/people/<person_id>/summary', methods=['POST'])

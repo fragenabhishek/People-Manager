@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
-
 NOTE_TYPES = ('general', 'meeting', 'call', 'email', 'event', 'follow_up')
 
 

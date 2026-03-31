@@ -2,9 +2,10 @@
 Configuration management module
 Centralizes all configuration settings with proper validation
 """
-import os
 import logging
+import os
 from typing import Optional
+
 from dotenv import load_dotenv
 
 load_dotenv()

@@ -2,15 +2,16 @@
 AI service for Google Gemini integration
 Handles AI-powered features: blueprints, Q&A, auto-tagging
 """
-from typing import Optional, Dict, List
 from datetime import datetime
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
-import markdown
-import bleach
+from typing import Dict, List, Optional
 
-from models.person import Person
+import bleach
+import google.generativeai as genai
+import markdown
+from google.generativeai.types import HarmBlockThreshold, HarmCategory
+
 from config import Config
+from models.person import Person
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
