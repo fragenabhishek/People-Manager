@@ -4,11 +4,11 @@ import Link from "next/link";
 import { Users, UserCheck, Bell, Tag } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { people, notes, type DashboardStats, type Note } from "@/lib/api";
+import { people, notes, type DashboardStats, type ActivityItem } from "@/lib/api";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [activity, setActivity] = useState<Note[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,13 +89,13 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-500">No recent activity yet.</p>
           ) : (
             <div className="space-y-3">
-              {activity.map((note) => (
-                <div key={note.id} className="flex items-start gap-3 text-sm">
+              {activity.map((item) => (
+                <div key={item.note.id} className="flex items-start gap-3 text-sm">
                   <div className="mt-1 h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-gray-800 dark:text-gray-200 truncate">{note.content}</p>
+                    <p className="text-gray-800 dark:text-gray-200 truncate">{item.note.content}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {note.note_type} &middot; {new Date(note.created_at).toLocaleDateString()}
+                      {item.person_name} &middot; {item.note.note_type} &middot; {new Date(item.note.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

@@ -51,8 +51,7 @@ jobs:
             -e SECRET_KEY=ci-test-key \
             -e FLASK_DEBUG=True \
             -p 5000:5000 \
-            people-manager:ci \
-            gunicorn --bind 0.0.0.0:5000 --workers 1 --timeout 10 app:app
+            people-manager:ci
           sleep 5
           curl -f http://localhost:5000/health || (docker logs pm-test && exit 1)
           docker stop pm-test

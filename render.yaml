@@ -3,10 +3,11 @@ services:
     name: people-manager
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 4
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-      - key: MONGO_URI
+      - key: SECRET_KEY
         sync: false
-
+      - key: DATABASE_URL
+        sync: false

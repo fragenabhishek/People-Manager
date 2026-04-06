@@ -2,10 +2,10 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { notes as notesApi, type Note } from "@/lib/api";
+import { notes as notesApi, type ActivityItem } from "@/lib/api";
 
 export default function ActivityPage() {
-  const [activity, setActivity] = useState<Note[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,16 +34,17 @@ export default function ActivityPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {activity.map((note) => (
-            <Card key={note.id} className="py-4">
+          {activity.map((item) => (
+            <Card key={item.note.id} className="py-4">
               <div className="flex items-start gap-3">
                 <div className="mt-1 h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-800 dark:text-gray-200">{note.content}</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{item.note.content}</p>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <Badge color="gray">{note.note_type}</Badge>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{item.person_name}</span>
+                    <Badge color="gray">{item.note.note_type}</Badge>
                     <span className="text-xs text-gray-400">
-                      {new Date(note.created_at).toLocaleDateString()}
+                      {new Date(item.note.created_at).toLocaleDateString()}
                     </span>
                   </div>
                 </div>

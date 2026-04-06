@@ -2,8 +2,6 @@
 
 An AI-powered personal relationship management system. Track contacts, nurture relationships, and never miss a follow-up.
 
-**Live Demo**: [https://people-manager-kebr.onrender.com/](https://people-manager-kebr.onrender.com/)
-
 ## Features
 
 **Contact Management**
@@ -43,70 +41,109 @@ An AI-powered personal relationship management system. Track contacts, nurture r
 - Tag breakdown with counts
 - Recently added contacts
 
-**Modern UI**
-- Three-panel layout with sidebar, grid, and detail drawer
-- Dark mode with persistence
-- Keyboard shortcuts (N = new, / = search, Esc = close)
-- Fully responsive (desktop, tablet, mobile)
-- Toast notification system
+**Authentication**
+- Dual auth: session cookies (browser) + JWT Bearer tokens (API)
+- Password change and reset flows
+- Per-user data isolation
+
+## Tech Stack
+
+- **Backend**: Python 3.11, FastAPI, Uvicorn
+- **Database**: PostgreSQL (via SQLAlchemy + Alembic) / MongoDB / JSON files
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS v4, Zustand
+- **AI**: Google Gemini API
+- **Security**: bcrypt, PyJWT, Pydantic validation, security headers
+- **CI/CD**: GitHub Actions (lint, test, Docker build)
+- **Deployment**: Docker, Render.com
 
 ## Quick Start
+
+### Backend
 
 ```bash
 git clone https://github.com/fragenabhishek/People-Manager.git
 cd People-Manager
 pip install -r requirements.txt
-python app.py
+uvicorn main:app --port 5000 --reload
 ```
 
-Open `http://localhost:5000`. The app uses JSON file storage by default.
+The backend runs at `http://localhost:5000`. It uses JSON file storage by default — no database setup needed.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend runs at `http://localhost:3000` and proxies API calls to the backend.
+
+### With Docker (PostgreSQL)
+
+```bash
+docker compose up
+```
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `MONGO_URI` | For cloud DB | MongoDB Atlas connection string |
+| `SECRET_KEY` | In production | Session + JWT signing key |
+| `DATABASE_URL` | For PostgreSQL | e.g. `postgresql://user:pass@host:5432/dbname` |
+| `MONGO_URI` | For MongoDB | MongoDB connection string (fallback if no DATABASE_URL) |
 | `GEMINI_API_KEY` | For AI features | Google Gemini API key |
-| `SECRET_KEY` | Recommended | Flask session secret key |
-| `FLASK_DEBUG` | No | Enable debug mode (True/False) |
+| `FLASK_DEBUG` | No | Enable debug mode (`True`/`False`) |
+| `JWT_ACCESS_TOKEN_MINUTES` | No | Access token TTL (default: 15) |
+| `JWT_REFRESH_TOKEN_MINUTES` | No | Refresh token TTL (default: 10080 / 7 days) |
+
+Database priority: `DATABASE_URL` (SQL) > `MONGO_URI` (MongoDB) > JSON files (default).
 
 ## Project Structure
 
 ```
 People-Manager/
-├── app.py                    # Application factory
-├── config/                   # Configuration
-├── models/                   # Person, Note, User entities
-├── repositories/             # Data access (MongoDB/JSON)
-├── services/                 # Business logic
-├── routes/                   # API endpoints
-├── middleware/                # Auth, rate limiting
-├── utils/                    # Validation, logging, responses
-├── templates/                # HTML templates
-├── static/                   # CSS, JS
-├── docs/                     # Requirements + System Design
-└── requirements.txt
+├── main.py                    # FastAPI application factory
+├── deps.py                    # FastAPI dependency injection (auth, services)
+├── config/                    # Configuration with env validation
+├── models/                    # Person, Note, User entities + SQLAlchemy tables
+├── schemas/                   # Pydantic request/response models
+├── repositories/              # Data access (SQL / MongoDB / JSON)
+├── services/                  # Business logic
+├── routers/                   # FastAPI API endpoints
+├── utils/                     # Validation, logging, hashing, responses
+├── alembic/                   # Database migrations
+├── templates/                 # Jinja2 HTML (legacy browser UI)
+├── static/                    # CSS, JS (legacy browser UI)
+├── tests/                     # Pytest suite (107+ tests)
+├── frontend/                  # Next.js React application
+│   ├── src/app/               # App Router pages
+│   ├── src/components/        # UI components
+│   ├── src/lib/               # API client, utilities
+│   └── src/stores/            # Zustand state management
+├── Dockerfile                 # Production container
+├── docker-compose.yml         # Docker with PostgreSQL
+└── .github/workflows/ci.yml   # CI pipeline
 ```
+
+## API Documentation
+
+FastAPI provides auto-generated interactive API docs:
+- **Swagger UI**: `http://localhost:5000/docs`
+- **ReDoc**: `http://localhost:5000/redoc`
 
 ## Architecture
 
 - SOLID principles throughout
-- Clean layered architecture (Models → Repos → Services → Routes)
-- Repository pattern with dual storage (MongoDB/JSON)
-- Dependency injection (wired in app factory)
-- Rate limiting, session security, XSS prevention
-- Structured logging and standardized API responses
+- Clean layered architecture (Models -> Repos -> Services -> Routers)
+- Repository pattern with three storage backends (SQL, MongoDB, JSON)
+- Dependency injection via FastAPI's `Depends` + `app.state`
+- Pydantic validation on all request/response payloads
+- Security headers, session cookies, JWT tokens
+- Structured logging (JSON in production, human-readable in dev)
+- 107+ automated tests with coverage reporting
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) | [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)
-
-## Tech Stack
-
-- **Backend**: Python 3.11, Flask 3.0
-- **Database**: MongoDB Atlas / JSON files
-- **AI**: Google Gemini API
-- **Frontend**: Vanilla JavaScript, CSS Custom Properties
-- **Security**: Flask-Bcrypt, Flask-Limiter, Bleach
-- **Hosting**: Render.com + Gunicorn
 
 ## License
 
