@@ -1,4 +1,6 @@
-# People Manager https://people-manager-kebr.onrender.com
+# People Manager
+
+Check out herre https://people-manager-kebr.onrender.com
 
 An AI-powered personal relationship management system. Track contacts, nurture relationships, and never miss a follow-up.
 
